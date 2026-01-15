@@ -367,27 +367,39 @@ export function BirdsEyeView({ stocks, onStockClick }: BirdsEyeViewProps) {
       </div>
 
       {/* Quick Stats */}
-      <div className="flex justify-center gap-6 text-sm">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-green-500" />
-          <span className="text-muted-foreground">Gainers: </span>
-          <span className="font-semibold text-green-500">
-            {displayData.filter(s => (s.changePercent || 0) > 0).length}
-          </span>
+      <div className="grid grid-cols-3 gap-3">
+        <div className="flex items-center gap-3 rounded-lg border-2 border-emerald-500/40 bg-emerald-500/20 p-3">
+          <div className="rounded-xl bg-emerald-500/30 p-2">
+            <div className="h-4 w-4 rounded-full bg-emerald-400" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">Gainers</p>
+            <p className="text-lg font-bold text-emerald-400">
+              {displayData.filter(s => (s.changePercent || 0) > 0).length}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-slate-500" />
-          <span className="text-muted-foreground">Unchanged: </span>
-          <span className="font-semibold text-muted-foreground">
-            {displayData.filter(s => (s.changePercent || 0) === 0).length}
-          </span>
+        <div className="flex items-center gap-3 rounded-lg border-2 border-slate-500/40 bg-slate-500/20 p-3">
+          <div className="rounded-xl bg-slate-500/30 p-2">
+            <div className="h-4 w-4 rounded-full bg-slate-400" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">Unchanged</p>
+            <p className="text-lg font-bold text-slate-400">
+              {displayData.filter(s => (s.changePercent || 0) === 0).length}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-red-500" />
-          <span className="text-muted-foreground">Losers: </span>
-          <span className="font-semibold text-red-500">
-            {displayData.filter(s => (s.changePercent || 0) < 0).length}
-          </span>
+        <div className="flex items-center gap-3 rounded-lg border-2 border-rose-500/40 bg-rose-500/20 p-3">
+          <div className="rounded-xl bg-rose-500/30 p-2">
+            <div className="h-4 w-4 rounded-full bg-rose-400" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">Losers</p>
+            <p className="text-lg font-bold text-rose-400">
+              {displayData.filter(s => (s.changePercent || 0) < 0).length}
+            </p>
+          </div>
         </div>
       </div>
     </div>
