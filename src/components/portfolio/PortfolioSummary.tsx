@@ -40,23 +40,26 @@ export function PortfolioSummary({ portfolio, stocks }: PortfolioSummaryProps) {
       label: "Total Invested",
       value: `৳${totals.totalInvested.toLocaleString("en-BD", { minimumFractionDigits: 2 })}`,
       icon: Wallet,
-      color: "text-primary",
-      bgColor: "bg-primary/10",
+      color: "text-amber-400",
+      bgColor: "bg-amber-500/20",
+      borderColor: "border-amber-500/40",
     },
     {
       label: "Current Value",
       value: `৳${totals.currentValue.toLocaleString("en-BD", { minimumFractionDigits: 2 })}`,
       icon: PieChart,
-      color: "text-blue-500",
-      bgColor: "bg-blue-500/10",
+      color: "text-cyan-400",
+      bgColor: "bg-cyan-500/20",
+      borderColor: "border-cyan-500/40",
     },
     {
       label: isProfit ? "Total Profit" : "Total Loss",
       value: `${isProfit ? "+" : ""}৳${totalGainLoss.toLocaleString("en-BD", { minimumFractionDigits: 2 })}`,
       subValue: `(${isProfit ? "+" : ""}${totalGainLossPercent.toFixed(2)}%)`,
       icon: isProfit ? TrendingUp : TrendingDown,
-      color: isProfit ? "text-emerald-500" : "text-rose-500",
-      bgColor: isProfit ? "bg-emerald-500/10" : "bg-rose-500/10",
+      color: isProfit ? "text-emerald-400" : "text-rose-400",
+      bgColor: isProfit ? "bg-emerald-500/20" : "bg-rose-500/20",
+      borderColor: isProfit ? "border-emerald-500/40" : "border-rose-500/40",
     },
   ];
 
@@ -67,16 +70,16 @@ export function PortfolioSummary({ portfolio, stocks }: PortfolioSummaryProps) {
   return (
     <div className="grid gap-4 md:grid-cols-3">
       {summaryItems.map((item) => (
-        <Card key={item.label} className={cn("p-4", item.bgColor)}>
-          <div className="flex items-center gap-3">
-            <div className={cn("rounded-lg p-2", item.bgColor)}>
-              <item.icon className={cn("h-5 w-5", item.color)} />
+        <Card key={item.label} className={cn("p-5 border-2", item.bgColor, item.borderColor)}>
+          <div className="flex items-center gap-4">
+            <div className={cn("rounded-xl p-3", item.bgColor)}>
+              <item.icon className={cn("h-6 w-6", item.color)} />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">{item.label}</p>
-              <p className={cn("text-lg font-bold", item.color)}>{item.value}</p>
+              <p className="text-sm font-medium text-muted-foreground">{item.label}</p>
+              <p className={cn("text-xl font-bold", item.color)}>{item.value}</p>
               {item.subValue && (
-                <p className={cn("text-xs font-medium", item.color)}>{item.subValue}</p>
+                <p className={cn("text-sm font-semibold", item.color)}>{item.subValue}</p>
               )}
             </div>
           </div>
