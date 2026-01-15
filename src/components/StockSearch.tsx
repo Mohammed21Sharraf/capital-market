@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Search, TrendingUp, TrendingDown, Building2, Loader2 } from "lucide-react";
+import { Search, TrendingUp, TrendingDown, Building2, Loader2, Star } from "lucide-react";
 import {
   CommandDialog,
   CommandEmpty,
@@ -12,6 +12,7 @@ import {
 import { Stock, StockFundamentals } from "@/types/market";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { useWatchlist } from "@/hooks/useWatchlist";
 
 interface StockSearchProps {
   stocks: Stock[];
@@ -27,6 +28,7 @@ export function StockSearch({ stocks, onStockSelect }: StockSearchProps) {
   const [fundamentals, setFundamentals] = useState<FundamentalsCache>({});
   const [loadingSymbols, setLoadingSymbols] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
+  const { watchlist, toggleWatchlist, isInWatchlist } = useWatchlist();
 
   // Keyboard shortcut: Ctrl+K or Cmd+K
   useEffect(() => {
@@ -69,7 +71,7 @@ export function StockSearch({ stocks, onStockSelect }: StockSearchProps) {
     }
   };
 
-  // Pre-fetch fundamentals for top movers when dialog opens
+  // Pre-fetch fundamentals for top movers and watchlist when dialog opens
   useEffect(() => {
     if (open && stocks.length > 0) {
       const topStocks = [
@@ -77,14 +79,28 @@ export function StockSearch({ stocks, onStockSelect }: StockSearchProps) {
         ...stocks.filter(s => s.changePercent < 0).sort((a, b) => a.changePercent - b.changePercent).slice(0, 5),
       ];
       
-      // Fetch fundamentals for top movers
-      topStocks.forEach(stock => {
+      // Also fetch for watchlist stocks
+      const watchlistStocks = stocks.filter(s => watchlist.includes(s.symbol));
+      
+      // Fetch fundamentals for top movers and watchlist
+      [...topStocks, ...watchlistStocks].forEach(stock => {
         if (!fundamentals[stock.symbol]) {
           fetchFundamental(stock.symbol);
         }
       });
     }
-  }, [open, stocks]);
+  }, [open, stocks, watchlist]);
+
+  // Get watchlist stocks
+  const watchlistStocks = useMemo(() => 
+    stocks.filter(stock => watchlist.includes(stock.symbol)),
+    [stocks, watchlist]
+  );
+
+  const handleStarClick = (e: React.MouseEvent, symbol: string) => {
+    e.stopPropagation();
+    toggleWatchlist(symbol);
+  };
 
   const handleSelect = (stock: Stock) => {
     setOpen(false);
@@ -181,6 +197,23 @@ export function StockSearch({ stocks, onStockSelect }: StockSearchProps) {
     );
   };
 
+  const renderStarButton = (symbol: string) => (
+    <button
+      onClick={(e) => handleStarClick(e, symbol)}
+      className="p-1 hover:bg-muted rounded transition-colors"
+      title={isInWatchlist(symbol) ? "Remove from watchlist" : "Add to watchlist"}
+    >
+      <Star
+        className={cn(
+          "h-4 w-4 transition-colors",
+          isInWatchlist(symbol)
+            ? "fill-yellow-500 text-yellow-500"
+            : "text-muted-foreground hover:text-yellow-500"
+        )}
+      />
+    </button>
+  );
+
   return (
     <>
       <button
@@ -203,19 +236,19 @@ export function StockSearch({ stocks, onStockSelect }: StockSearchProps) {
         <CommandList className="max-h-[500px]">
           <CommandEmpty>No stocks found.</CommandEmpty>
 
-          {/* Quick Access - Top Gainers (only when not searching) */}
-          {!searchQuery && topGainers.length > 0 && (
-            <CommandGroup heading="Top Gainers">
-              {topGainers.map((stock) => (
+          {/* Watchlist Section */}
+          {!searchQuery && watchlistStocks.length > 0 && (
+            <CommandGroup heading="⭐ My Watchlist">
+              {watchlistStocks.map((stock) => (
                 <CommandItem
-                  key={`gainer-${stock.symbol}`}
-                  value={`${stock.symbol} ${stock.name} ${stock.sector} gainer`}
+                  key={`watchlist-${stock.symbol}`}
+                  value={`${stock.symbol} ${stock.name} ${stock.sector} watchlist`}
                   onSelect={() => handleSelect(stock)}
                   className="flex flex-col items-start gap-1 py-2"
                 >
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-success" />
+                      {renderStarButton(stock.symbol)}
                       <span className="font-medium">{stock.symbol}</span>
                       <span className="text-muted-foreground text-xs truncate max-w-[120px]">
                         {stock.name}
@@ -223,7 +256,12 @@ export function StockSearch({ stocks, onStockSelect }: StockSearchProps) {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="font-mono text-sm">৳{stock.ltp.toFixed(2)}</span>
-                      <span className="font-mono text-sm text-success">
+                      <span
+                        className={cn(
+                          "font-mono text-sm",
+                          stock.changePercent >= 0 ? "text-success" : "text-destructive"
+                        )}
+                      >
                         {formatChange(stock.changePercent)}
                       </span>
                     </div>
@@ -232,6 +270,41 @@ export function StockSearch({ stocks, onStockSelect }: StockSearchProps) {
                 </CommandItem>
               ))}
             </CommandGroup>
+          )}
+
+          {/* Quick Access - Top Gainers (only when not searching) */}
+          {!searchQuery && topGainers.length > 0 && (
+            <>
+              {watchlistStocks.length > 0 && <CommandSeparator />}
+              <CommandGroup heading="Top Gainers">
+                {topGainers.map((stock) => (
+                  <CommandItem
+                    key={`gainer-${stock.symbol}`}
+                    value={`${stock.symbol} ${stock.name} ${stock.sector} gainer`}
+                    onSelect={() => handleSelect(stock)}
+                    className="flex flex-col items-start gap-1 py-2"
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        {renderStarButton(stock.symbol)}
+                        <TrendingUp className="h-4 w-4 text-success" />
+                        <span className="font-medium">{stock.symbol}</span>
+                        <span className="text-muted-foreground text-xs truncate max-w-[120px]">
+                          {stock.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-sm">৳{stock.ltp.toFixed(2)}</span>
+                        <span className="font-mono text-sm text-success">
+                          {formatChange(stock.changePercent)}
+                        </span>
+                      </div>
+                    </div>
+                    {renderFundamentals(stock.symbol)}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </>
           )}
 
           {/* Quick Access - Top Losers (only when not searching) */}
@@ -248,6 +321,7 @@ export function StockSearch({ stocks, onStockSelect }: StockSearchProps) {
                   >
                     <div className="flex items-center justify-between w-full">
                       <div className="flex items-center gap-2">
+                        {renderStarButton(stock.symbol)}
                         <TrendingDown className="h-4 w-4 text-destructive" />
                         <span className="font-medium">{stock.symbol}</span>
                         <span className="text-muted-foreground text-xs truncate max-w-[120px]">
@@ -287,6 +361,7 @@ export function StockSearch({ stocks, onStockSelect }: StockSearchProps) {
                     >
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center gap-2">
+                          {renderStarButton(stock.symbol)}
                           <Building2 className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium">{stock.symbol}</span>
                           <span className="text-muted-foreground text-xs truncate max-w-[100px]">
