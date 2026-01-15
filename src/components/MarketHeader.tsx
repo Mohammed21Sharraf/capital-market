@@ -1,7 +1,8 @@
 import { RefreshCw, TrendingUp } from "lucide-react";
-import { MarketStatus } from "@/types/market";
+import { MarketStatus, Stock } from "@/types/market";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { StockSearch } from "./StockSearch";
 
 interface MarketHeaderProps {
   status: MarketStatus;
@@ -9,6 +10,8 @@ interface MarketHeaderProps {
   nextRefresh: number;
   isLoading: boolean;
   onRefresh: () => void;
+  stocks?: Stock[];
+  onStockSelect?: (stock: Stock) => void;
 }
 
 export function MarketHeader({
@@ -17,12 +20,14 @@ export function MarketHeader({
   nextRefresh,
   isLoading,
   onRefresh,
+  stocks = [],
+  onStockSelect,
 }: MarketHeaderProps) {
   return (
     <header className="border-b border-border bg-card px-4 py-4 md:px-6">
       <div className="mx-auto max-w-7xl">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          {/* Logo and Title */}
+          {/* Logo, Title, and Search */}
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 glow-primary">
               <TrendingUp className="h-5 w-5 text-primary" />
@@ -34,6 +39,10 @@ export function MarketHeader({
               <p className="text-xs text-muted-foreground md:text-sm">
                 Real-time Stock Exchange Data
               </p>
+            </div>
+            {/* Search Button */}
+            <div className="ml-2">
+              <StockSearch stocks={stocks} onStockSelect={onStockSelect} />
             </div>
           </div>
 
