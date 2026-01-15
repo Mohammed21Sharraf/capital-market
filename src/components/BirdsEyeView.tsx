@@ -93,10 +93,10 @@ const SectorTreemapContent = ({
                 fontSize: Math.min(11, Math.max(8, Math.min(width, height) / 8)),
                 fontFamily: "'JetBrains Mono', monospace",
                 textShadow: "0 1px 2px rgba(0,0,0,0.5)",
-                pointerEvents: "none",
-              }}
-            >
-              {stockCount} stocks • {avgChange > 0 ? "+" : ""}{avgChange.toFixed(2)}%
+              pointerEvents: "none",
+            }}
+          >
+            {stockCount ?? 0} stocks • {(avgChange ?? 0) > 0 ? "+" : ""}{(avgChange ?? 0).toFixed(2)}%
             </text>
           )}
           {showStats && (
@@ -110,9 +110,9 @@ const SectorTreemapContent = ({
                 fontSize: Math.min(10, Math.max(7, Math.min(width, height) / 10)),
                 textShadow: "0 1px 2px rgba(0,0,0,0.5)",
                 pointerEvents: "none",
-              }}
-            >
-              ↑{advancers} ↓{decliners}
+            }}
+          >
+            ↑{advancers ?? 0} ↓{decliners ?? 0}
             </text>
           )}
         </>
@@ -186,7 +186,7 @@ const StockTreemapContent = ({
             pointerEvents: "none",
           }}
         >
-          {changePercent > 0 ? "+" : ""}{changePercent.toFixed(2)}%
+          {(changePercent ?? 0) > 0 ? "+" : ""}{(changePercent ?? 0).toFixed(2)}%
         </text>
       )}
     </g>
@@ -203,14 +203,14 @@ const SectorTooltip = ({ active, payload }: any) => {
     <div className="rounded-lg border border-border bg-popover p-3 shadow-lg">
       <div className="font-semibold text-foreground">{data.name}</div>
       <div className="mt-1 space-y-1 text-sm text-muted-foreground">
-        <div>Stocks: {data.stockCount}</div>
-        <div>Value: {formatValue(data.size)}</div>
-        <div className={data.avgChange >= 0 ? "text-green-500" : "text-red-500"}>
-          Avg Change: {data.avgChange > 0 ? "+" : ""}{data.avgChange.toFixed(2)}%
+        <div>Stocks: {data.stockCount ?? 0}</div>
+        <div>Value: {formatValue(data.size ?? 0)}</div>
+        <div className={(data.avgChange ?? 0) >= 0 ? "text-green-500" : "text-red-500"}>
+          Avg Change: {(data.avgChange ?? 0) > 0 ? "+" : ""}{(data.avgChange ?? 0).toFixed(2)}%
         </div>
         <div className="flex gap-3">
-          <span className="text-green-500">↑ {data.advancers}</span>
-          <span className="text-red-500">↓ {data.decliners}</span>
+          <span className="text-green-500">↑ {data.advancers ?? 0}</span>
+          <span className="text-red-500">↓ {data.decliners ?? 0}</span>
         </div>
       </div>
       <div className="mt-2 text-xs text-muted-foreground">Click to view stocks</div>
@@ -234,21 +234,21 @@ const StockTooltip = ({ active, payload }: any) => {
       <div className="mt-2 space-y-1 text-sm">
         <div className="flex justify-between gap-4">
           <span className="text-muted-foreground">Price:</span>
-          <span className="font-mono text-foreground">৳{stock.ltp.toFixed(2)}</span>
+          <span className="font-mono text-foreground">৳{(stock.ltp ?? 0).toFixed(2)}</span>
         </div>
         <div className="flex justify-between gap-4">
           <span className="text-muted-foreground">Change:</span>
-          <span className={`font-mono ${stock.change >= 0 ? "text-green-500" : "text-red-500"}`}>
-            {stock.change > 0 ? "+" : ""}{stock.change.toFixed(2)} ({stock.changePercent > 0 ? "+" : ""}{stock.changePercent.toFixed(2)}%)
+          <span className={`font-mono ${(stock.change ?? 0) >= 0 ? "text-green-500" : "text-red-500"}`}>
+            {(stock.change ?? 0) > 0 ? "+" : ""}{(stock.change ?? 0).toFixed(2)} ({(stock.changePercent ?? 0) > 0 ? "+" : ""}{(stock.changePercent ?? 0).toFixed(2)}%)
           </span>
         </div>
         <div className="flex justify-between gap-4">
           <span className="text-muted-foreground">Volume:</span>
-          <span className="font-mono text-foreground">{stock.volume.toLocaleString()}</span>
+          <span className="font-mono text-foreground">{(stock.volume ?? 0).toLocaleString()}</span>
         </div>
         <div className="flex justify-between gap-4">
           <span className="text-muted-foreground">Value:</span>
-          <span className="font-mono text-foreground">{formatValue(stock.valueMn)}</span>
+          <span className="font-mono text-foreground">{formatValue(stock.valueMn ?? 0)}</span>
         </div>
       </div>
       <div className="mt-2 text-xs text-muted-foreground">Click for details</div>
