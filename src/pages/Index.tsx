@@ -12,9 +12,7 @@ import { StockTicker } from "@/components/StockTicker";
 import { Disclaimer } from "@/components/Disclaimer";
 import { useMarketData } from "@/hooks/useMarketData";
 import { Stock } from "@/types/market";
-import { AlertCircle, Eye, Star } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useWatchlist } from "@/hooks/useWatchlist";
+import { AlertCircle } from "lucide-react";
 
 const Index = () => {
   const {
@@ -29,7 +27,6 @@ const Index = () => {
 
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { watchlist } = useWatchlist();
 
   const handleStockClick = (stock: Stock) => {
     setSelectedStock(stock);
@@ -89,28 +86,7 @@ const Index = () => {
 
           {/* Sectoral Performance */}
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-foreground">Sectoral Performance</h2>
-              <div className="flex items-center gap-2">
-                <Link to="/watchlist">
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Star className="h-4 w-4" />
-                    Watchlist
-                    {watchlist.length > 0 && (
-                      <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
-                        {watchlist.length}
-                      </span>
-                    )}
-                  </Button>
-                </Link>
-                <Link to="/birds-eye">
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Eye className="h-4 w-4" />
-                    Birds Eye View
-                  </Button>
-                </Link>
-              </div>
-            </div>
+            <h2 className="mb-3 text-lg font-semibold text-foreground">Sectoral Performance</h2>
             <div className="rounded-lg border border-border bg-card p-4">
               <SectorPerformance stocks={stocks} />
             </div>

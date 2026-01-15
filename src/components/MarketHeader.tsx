@@ -1,8 +1,10 @@
-import { RefreshCw, TrendingUp, Clock, Activity, Zap } from "lucide-react";
+import { RefreshCw, TrendingUp, Clock, Activity, Zap, Star, Eye } from "lucide-react";
+import { Link } from "react-router-dom";
 import { MarketStatus, Stock } from "@/types/market";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { StockSearch } from "./StockSearch";
+import { useWatchlist } from "@/hooks/useWatchlist";
 
 interface MarketHeaderProps {
   status: MarketStatus;
@@ -23,6 +25,8 @@ export function MarketHeader({
   stocks = [],
   onStockSelect,
 }: MarketHeaderProps) {
+  const { watchlist } = useWatchlist();
+
   return (
     <header className="border-b border-border/50 bg-gradient-to-r from-card via-card to-card/80 px-4 py-3 md:px-6 backdrop-blur-sm">
       <div className="mx-auto max-w-7xl">
@@ -43,10 +47,40 @@ export function MarketHeader({
             </div>
           </div>
 
-          {/* Center Section - Search & Update Info */}
-          <div className="flex flex-1 items-center justify-center gap-3">
+          {/* Center Section - Search & Nav Links */}
+          <div className="flex flex-1 items-center justify-center gap-2 md:gap-3">
+            {/* Search */}
+            <StockSearch stocks={stocks} onStockSelect={onStockSelect} />
+
+            {/* Navigation Links */}
+            <Link to="/watchlist">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="gap-1.5 rounded-full px-3 hover:bg-primary/10 hover:text-primary transition-colors"
+              >
+                <Star className="h-4 w-4" />
+                <span className="hidden sm:inline">Watchlist</span>
+                {watchlist.length > 0 && (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                    {watchlist.length}
+                  </span>
+                )}
+              </Button>
+            </Link>
+            <Link to="/birds-eye">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="gap-1.5 rounded-full px-3 hover:bg-primary/10 hover:text-primary transition-colors"
+              >
+                <Eye className="h-4 w-4" />
+                <span className="hidden sm:inline">Bird's Eye</span>
+              </Button>
+            </Link>
+
             {/* Combined Update Tab */}
-            <div className="hidden md:flex items-center gap-3 rounded-full bg-secondary/60 px-4 py-1.5 border border-border/50">
+            <div className="hidden lg:flex items-center gap-3 rounded-full bg-secondary/60 px-4 py-1.5 border border-border/50">
               <div className="flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-xs text-muted-foreground">
@@ -79,15 +113,12 @@ export function MarketHeader({
                 <RefreshCw className={cn("h-3.5 w-3.5", isLoading && "animate-spin")} />
               </Button>
             </div>
-
-            {/* Search */}
-            <StockSearch stocks={stocks} onStockSelect={onStockSelect} />
           </div>
 
           {/* Right Section - Market Status */}
           <div className="flex items-center gap-2">
-            {/* Mobile Update Info */}
-            <div className="flex md:hidden items-center gap-2 rounded-full bg-secondary/60 px-3 py-1.5 border border-border/50">
+            {/* Mobile/Tablet Update Info */}
+            <div className="flex lg:hidden items-center gap-2 rounded-full bg-secondary/60 px-3 py-1.5 border border-border/50">
               <span className="text-xs font-mono text-muted-foreground">{nextRefresh}s</span>
               <Button
                 variant="ghost"
