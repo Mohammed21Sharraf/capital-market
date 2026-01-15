@@ -47,8 +47,17 @@ export function AddPortfolioDialog({ stocks, isLoading, onAdd }: AddPortfolioDia
   };
 
   const handleSubmit = () => {
-    const symbolToUse = useManualEntry ? manualSymbol.trim().toUpperCase() : selectedStock?.symbol;
-    
+    const typedSymbol = searchQuery.trim().toUpperCase();
+    const resolvedSymbol = useManualEntry
+      ? manualSymbol.trim().toUpperCase()
+      : (selectedStock?.symbol || typedSymbol);
+
+    const matchedStock = resolvedSymbol
+      ? stocks.find((s) => s.symbol.toUpperCase() === resolvedSymbol)
+      : undefined;
+
+    const symbolToUse = matchedStock?.symbol || resolvedSymbol;
+
     if (!symbolToUse) {
       toast.error("Please select or enter a stock symbol");
       return;
@@ -59,8 +68,10 @@ export function AddPortfolioDialog({ stocks, isLoading, onAdd }: AddPortfolioDia
       return;
     }
 
+    // If user didn't select from the dropdown, still allow adding by typed symbol
+    // and auto-fill cost price from live price when available.
     const qty = parseFloat(quantity);
-    const cost = parseFloat(costPrice);
+    const cost = parseFloat(costPrice || (matchedStock ? String(matchedStock.ltp) : ""));
 
     if (isNaN(qty) || qty <= 0) {
       toast.error("Please enter a valid quantity");
