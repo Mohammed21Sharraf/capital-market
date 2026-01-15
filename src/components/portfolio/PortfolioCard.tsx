@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PortfolioItem } from "@/hooks/usePortfolio";
 import { Stock } from "@/types/market";
-import { Trash2, Edit2, Check, X, TrendingUp, TrendingDown } from "lucide-react";
+import { Trash2, Edit2, Check, X, TrendingUp, TrendingDown, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -13,9 +13,10 @@ interface PortfolioCardProps {
   stock?: Stock;
   onUpdate: (id: string, updates: Partial<Omit<PortfolioItem, "id">>) => void;
   onRemove: (id: string) => void;
+  onViewDetails?: (stock: Stock) => void;
 }
 
-export function PortfolioCard({ item, stock, onUpdate, onRemove }: PortfolioCardProps) {
+export function PortfolioCard({ item, stock, onUpdate, onRemove, onViewDetails }: PortfolioCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editQuantity, setEditQuantity] = useState(item.quantity.toString());
   const [editCostPrice, setEditCostPrice] = useState(item.costPrice.toString());
@@ -84,6 +85,16 @@ export function PortfolioCard({ item, stock, onUpdate, onRemove }: PortfolioCard
             </>
           ) : (
             <>
+              {stock && onViewDetails && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => onViewDetails(stock)} 
+                  className="h-8 w-8 text-primary hover:text-primary"
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+              )}
               <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)} className="h-8 w-8">
                 <Edit2 className="h-4 w-4" />
               </Button>

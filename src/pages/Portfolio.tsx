@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Briefcase, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,9 @@ import { useMarketData } from "@/hooks/useMarketData";
 import { PortfolioCard } from "@/components/portfolio/PortfolioCard";
 import { PortfolioSummary } from "@/components/portfolio/PortfolioSummary";
 import { AddPortfolioDialog } from "@/components/portfolio/AddPortfolioDialog";
+import { StockDetailModal } from "@/components/StockDetailModal";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Stock } from "@/types/market";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +26,8 @@ import { toast } from "sonner";
 const Portfolio = () => {
   const { portfolio, isLoaded, addItem, updateItem, removeItem, clearPortfolio } = usePortfolio();
   const { stocks, isLoading: isLoadingStocks } = useMarketData();
+  const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const isInitialStocksLoading = isLoadingStocks && stocks.length === 0;
   const stockMap = new Map(stocks.map((s) => [s.symbol, s]));
@@ -30,6 +35,16 @@ const Portfolio = () => {
   const handleClearAll = () => {
     clearPortfolio();
     toast.success("Portfolio cleared");
+  };
+
+  const handleViewDetails = (stock: Stock) => {
+    setSelectedStock(stock);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedStock(null);
   };
 
   return (
@@ -128,6 +143,7 @@ const Portfolio = () => {
                     stock={stockMap.get(item.symbol)}
                     onUpdate={updateItem}
                     onRemove={removeItem}
+                    onViewDetails={handleViewDetails}
                   />
                 ))}
               </div>
@@ -143,6 +159,13 @@ const Portfolio = () => {
           </div>
         </div>
       </main>
+
+      {/* Stock Detail Modal */}
+      <StockDetailModal
+        stock={selectedStock}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
     </div>
   );
 };
