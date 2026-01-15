@@ -16,6 +16,9 @@ import {
   RefreshCw,
   Bell,
   Loader2,
+  TrendingUp,
+  TrendingDown,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -183,6 +186,52 @@ const Watchlist = () => {
           </div>
         ) : (
           <>
+            {/* Summary Stats */}
+            {watchlistStocks.length > 0 && (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-6">
+                <div className="flex items-center gap-3 rounded-lg border-2 border-amber-500/40 bg-amber-500/20 p-3">
+                  <div className="rounded-xl bg-amber-500/30 p-2">
+                    <Star className="h-4 w-4 text-amber-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Watching</p>
+                    <p className="text-lg font-bold text-amber-400">{watchlistStocks.length}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border-2 border-cyan-500/40 bg-cyan-500/20 p-3">
+                  <div className="rounded-xl bg-cyan-500/30 p-2">
+                    <Activity className="h-4 w-4 text-cyan-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Alerts</p>
+                    <p className="text-lg font-bold text-cyan-400">{totalAlerts}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border-2 border-emerald-500/40 bg-emerald-500/20 p-3">
+                  <div className="rounded-xl bg-emerald-500/30 p-2">
+                    <TrendingUp className="h-4 w-4 text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Gainers</p>
+                    <p className="text-lg font-bold text-emerald-400">
+                      {watchlistStocks.filter(s => s.changePercent > 0).length}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border-2 border-rose-500/40 bg-rose-500/20 p-3">
+                  <div className="rounded-xl bg-rose-500/30 p-2">
+                    <TrendingDown className="h-4 w-4 text-rose-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Losers</p>
+                    <p className="text-lg font-bold text-rose-400">
+                      {watchlistStocks.filter(s => s.changePercent < 0).length}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Loading State */}
             {isLoading && watchlistStocks.length === 0 && (
               <div className="flex items-center justify-center py-20">
