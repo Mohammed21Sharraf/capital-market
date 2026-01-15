@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, TrendingUp, TrendingDown, Building2, BarChart3 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Search, TrendingUp, TrendingDown, Building2 } from "lucide-react";
 import {
   CommandDialog,
   CommandEmpty,
@@ -65,18 +64,16 @@ export function StockSearch({ stocks, onStockSelect }: StockSearchProps) {
 
   return (
     <>
-      <Button
-        variant="outline"
-        size="sm"
+      <button
         onClick={() => setOpen(true)}
-        className="gap-2 bg-secondary border-border hover:bg-secondary/80"
+        className="flex items-center gap-3 rounded-lg border border-border bg-secondary/80 px-4 py-2.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground min-w-[200px] sm:min-w-[280px]"
       >
         <Search className="h-4 w-4" />
-        <span className="hidden sm:inline">Search</span>
-        <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-          <span className="text-xs">⌘</span>K
+        <span className="text-sm">Search</span>
+        <kbd className="pointer-events-none ml-auto flex h-6 select-none items-center gap-1 rounded border border-border bg-muted px-2 font-mono text-xs font-medium">
+          <span>⌘</span>K
         </kbd>
-      </Button>
+      </button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput placeholder="Search stocks, sectors, EPS, P/E..." />

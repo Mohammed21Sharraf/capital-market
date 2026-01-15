@@ -27,7 +27,7 @@ export function MarketHeader({
     <header className="border-b border-border bg-card px-4 py-4 md:px-6">
       <div className="mx-auto max-w-7xl">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          {/* Logo, Title, and Search */}
+          {/* Logo and Title */}
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 glow-primary">
               <TrendingUp className="h-5 w-5 text-primary" />
@@ -40,10 +40,11 @@ export function MarketHeader({
                 Real-time Stock Exchange Data
               </p>
             </div>
-            {/* Search Button */}
-            <div className="ml-2">
-              <StockSearch stocks={stocks} onStockSelect={onStockSelect} />
-            </div>
+          </div>
+
+          {/* Centered Search Button */}
+          <div className="flex-1 flex justify-center">
+            <StockSearch stocks={stocks} onStockSelect={onStockSelect} />
           </div>
 
           {/* Status and Controls */}
