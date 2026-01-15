@@ -29,36 +29,41 @@ export function MarketSummary({ stocks }: MarketSummaryProps) {
       label: "Total Trade",
       value: formatVolume(totalTrade),
       icon: Activity,
-      color: "text-primary",
-      bgColor: "bg-primary/10",
+      color: "text-amber-400",
+      bgColor: "bg-amber-500/20",
+      borderColor: "border-amber-500/40",
     },
     {
       label: "Total Volume",
       value: formatVolume(totalVolume),
       icon: BarChart3,
       color: "text-cyan-400",
-      bgColor: "bg-cyan-500/10",
+      bgColor: "bg-cyan-500/20",
+      borderColor: "border-cyan-500/40",
     },
     {
       label: "Total Value (Mn)",
       value: formatValue(totalValueMn),
       icon: DollarSign,
-      color: "text-foreground",
-      bgColor: "bg-secondary",
+      color: "text-violet-400",
+      bgColor: "bg-violet-500/20",
+      borderColor: "border-violet-500/40",
     },
     {
       label: "Advancers",
       value: advancers,
       icon: TrendingUp,
-      color: "text-price-up",
-      bgColor: "bg-success/10",
+      color: "text-emerald-400",
+      bgColor: "bg-emerald-500/20",
+      borderColor: "border-emerald-500/40",
     },
     {
       label: "Decliners",
       value: decliners,
       icon: TrendingDown,
-      color: "text-price-down",
-      bgColor: "bg-destructive/10",
+      color: "text-rose-400",
+      bgColor: "bg-rose-500/20",
+      borderColor: "border-rose-500/40",
     },
   ];
 
@@ -67,14 +72,14 @@ export function MarketSummary({ stocks }: MarketSummaryProps) {
       {stats.map((stat) => (
         <div
           key={stat.label}
-          className="rounded-lg border border-border bg-card p-3 transition-all hover:border-primary/30 md:p-4"
+          className={`rounded-lg border-2 p-3 transition-all hover:scale-[1.02] md:p-4 ${stat.bgColor} ${stat.borderColor}`}
         >
           <div className="flex items-center gap-2 md:gap-3">
-            <div className={`rounded-lg ${stat.bgColor} p-1.5 md:p-2`}>
-              <stat.icon className={`h-3.5 w-3.5 md:h-4 md:w-4 ${stat.color}`} />
+            <div className={`rounded-xl ${stat.bgColor} p-2 md:p-2.5`}>
+              <stat.icon className={`h-4 w-4 md:h-5 md:w-5 ${stat.color}`} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[10px] text-muted-foreground md:text-xs">{stat.label}</p>
+              <p className="truncate text-[10px] font-medium text-muted-foreground md:text-xs">{stat.label}</p>
               <p className={`font-mono text-sm font-bold md:text-lg ${stat.color}`}>
                 {stat.value}
               </p>
