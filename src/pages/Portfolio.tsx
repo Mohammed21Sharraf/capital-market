@@ -50,34 +50,34 @@ const Portfolio = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card px-4 py-4 md:px-6">
+      <header className="border-b border-border bg-card px-3 py-3 md:px-6 md:py-4">
         <div className="mx-auto max-w-5xl">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
               <Link to="/">
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <ArrowLeft className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="h-8 w-8 md:h-10 md:w-10 rounded-full flex-shrink-0">
+                  <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
                 </Button>
               </Link>
-              <div className="flex items-center gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
-                  <Briefcase className="h-5 w-5 text-primary-foreground" />
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg flex-shrink-0">
+                  <Briefcase className="h-4 w-4 md:h-5 md:w-5 text-primary-foreground" />
                 </div>
-                <div>
-                  <h1 className="text-xl font-bold">My Portfolio</h1>
-                  <p className="text-xs text-muted-foreground">
-                    Track your investments • Saved locally
+                <div className="min-w-0">
+                  <h1 className="text-base md:text-xl font-bold truncate">My Portfolio</h1>
+                  <p className="text-[10px] md:text-xs text-muted-foreground truncate">
+                    Track investments • Local
                   </p>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
               {portfolio.length > 0 && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2 text-rose-500 hover:text-rose-600">
+                    <Button variant="outline" size="icon" className="h-8 w-8 md:h-9 md:w-auto md:px-3 text-rose-500 hover:text-rose-600">
                       <Trash2 className="h-4 w-4" />
-                      <span className="hidden sm:inline">Clear All</span>
+                      <span className="hidden md:inline ml-1.5">Clear All</span>
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>

@@ -68,33 +68,33 @@ export function PortfolioSummary({ portfolio, stocks }: PortfolioSummaryProps) {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="grid grid-cols-2 gap-2 md:gap-4 md:grid-cols-3">
       {summaryItems.map((item) => (
-        <Card key={item.label} className={cn("p-5 border-2", item.bgColor, item.borderColor)}>
-          <div className="flex items-center gap-4">
-            <div className={cn("rounded-xl p-3", item.bgColor)}>
-              <item.icon className={cn("h-6 w-6", item.color)} />
+        <Card key={item.label} className={cn("p-3 md:p-5 border-2", item.bgColor, item.borderColor)}>
+          <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+            <div className={cn("rounded-lg md:rounded-xl p-2 md:p-3 w-fit", item.bgColor)}>
+              <item.icon className={cn("h-4 w-4 md:h-6 md:w-6", item.color)} />
             </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">{item.label}</p>
-              <p className={cn("text-xl font-bold", item.color)}>{item.value}</p>
+            <div className="min-w-0">
+              <p className="text-[10px] md:text-sm font-medium text-muted-foreground truncate">{item.label}</p>
+              <p className={cn("text-sm md:text-xl font-bold truncate", item.color)}>{item.value}</p>
               {item.subValue && (
-                <p className={cn("text-sm font-semibold", item.color)}>{item.subValue}</p>
+                <p className={cn("text-xs md:text-sm font-semibold", item.color)}>{item.subValue}</p>
               )}
             </div>
           </div>
         </Card>
       ))}
-      <Card className="p-4 bg-secondary/30 md:col-span-3">
-        <div className="flex flex-wrap items-center justify-center gap-6 text-center">
+      <Card className="p-3 md:p-4 bg-secondary/30 col-span-2 md:col-span-3">
+        <div className="flex flex-wrap items-center justify-center gap-4 md:gap-6 text-center">
           <div>
-            <p className="text-2xl font-bold">{totals.totalStocks}</p>
-            <p className="text-xs text-muted-foreground">Stocks</p>
+            <p className="text-xl md:text-2xl font-bold">{totals.totalStocks}</p>
+            <p className="text-[10px] md:text-xs text-muted-foreground">Stocks</p>
           </div>
-          <div className="h-8 w-px bg-border" />
+          <div className="h-6 md:h-8 w-px bg-border" />
           <div>
-            <p className="text-2xl font-bold">{totals.totalShares.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">Total Shares</p>
+            <p className="text-xl md:text-2xl font-bold">{totals.totalShares.toLocaleString()}</p>
+            <p className="text-[10px] md:text-xs text-muted-foreground">Total Shares</p>
           </div>
         </div>
       </Card>
