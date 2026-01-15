@@ -61,27 +61,71 @@ function parseIntNumber(text: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-async function fetchHtml(url: string): Promise<string> {
-  try {
-    const res = await fetch(url, {
-      headers: {
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "accept-language": "en-US,en;q=0.5",
-        "cache-control": "no-cache",
-      },
-    });
-    if (!res.ok) {
-      console.error(`Fetch failed with status ${res.status} for ${url}`);
-      throw new Error(`Fetch failed ${res.status} for ${url}`);
+// Delay helper for retry backoff
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Fetch with exponential backoff retry
+async function fetchWithRetry(
+  url: string, 
+  maxRetries: number = 3, 
+  baseDelayMs: number = 1000
+): Promise<string> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      if (attempt > 0) {
+        const backoffDelay = baseDelayMs * Math.pow(2, attempt - 1);
+        const jitter = Math.random() * 500;
+        const totalDelay = backoffDelay + jitter;
+        console.log(`Retry attempt ${attempt}/${maxRetries} after ${Math.round(totalDelay)}ms delay`);
+        await delay(totalDelay);
+      }
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+          "accept-language": "en-US,en;q=0.5",
+          "cache-control": "no-cache",
+        },
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+      
+      const text = await res.text();
+      console.log(`Fetched HTML successfully (${text.length} chars) on attempt ${attempt + 1}`);
+      return text;
+      
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      const isRetryable = 
+        lastError.message.includes("abort") ||
+        lastError.message.includes("timeout") ||
+        lastError.message.includes("network") ||
+        lastError.message.includes("HTTP 5") ||
+        lastError.message.includes("HTTP 429");
+      
+      console.warn(`Fetch attempt ${attempt + 1} failed: ${lastError.message}`);
+      
+      if (!isRetryable || attempt === maxRetries) {
+        console.error(`All ${maxRetries + 1} fetch attempts failed for ${url}`);
+        throw lastError;
+      }
     }
-    const text = await res.text();
-    console.log(`Fetched HTML length: ${text.length} chars`);
-    return text;
-  } catch (error) {
-    console.error(`Fetch error for ${url}:`, error);
-    throw error;
   }
+  
+  throw lastError || new Error("Fetch failed after retries");
 }
 
 // Pattern-based sector detection
@@ -208,7 +252,7 @@ async function getRawMarketSnapshot(): Promise<{ rawStocks: RawStockData[]; time
   if (cachedMarket && now - cachedMarket.fetchedAt < CACHE_TTL_MS) return cachedMarket.data;
   
   try {
-    const marketHtml = await fetchHtml("https://www.dsebd.org/latest_share_price_scroll_by_ltp.php");
+    const marketHtml = await fetchWithRetry("https://www.dsebd.org/latest_share_price_scroll_by_ltp.php", 3, 1000);
     const timestampText = extractTimestampTextFromMarketPage(marketHtml);
     const rawStocks = parseMarketStocks(marketHtml);
     
