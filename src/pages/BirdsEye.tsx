@@ -1,21 +1,15 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { MarketHeader } from "@/components/MarketHeader";
-import { MarketSummary } from "@/components/MarketSummary";
-import { StrengthMeter } from "@/components/StrengthMeter";
-import { TopMovers } from "@/components/TopMovers";
-import { ValueChartSection } from "@/components/ValueChartSection";
-import { SectorPerformance } from "@/components/SectorPerformance";
-import { MarketTable } from "@/components/MarketTable";
+import { BirdsEyeView } from "@/components/BirdsEyeView";
 import { StockDetailModal } from "@/components/StockDetailModal";
 import { StockTicker } from "@/components/StockTicker";
-import { Disclaimer } from "@/components/Disclaimer";
 import { useMarketData } from "@/hooks/useMarketData";
 import { Stock } from "@/types/market";
-import { AlertCircle, Eye } from "lucide-react";
+import { AlertCircle, ArrowLeft, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const Index = () => {
+const BirdsEye = () => {
   const {
     stocks,
     status,
@@ -41,7 +35,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Stock Ticker - Top scrolling prices */}
+      {/* Stock Ticker */}
       <StockTicker stocks={stocks} />
 
       <MarketHeader
@@ -54,6 +48,25 @@ const Index = () => {
 
       <main className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
         <div className="space-y-6">
+          {/* Navigation */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link to="/">
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  Dashboard
+                </Button>
+              </Link>
+              <div className="flex items-center gap-2">
+                <Eye className="h-5 w-5 text-primary" />
+                <h1 className="text-xl font-bold text-foreground">Birds Eye View</h1>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground hidden md:block">
+              Real-time market heatmap by sector and stock
+            </p>
+          </div>
+
           {/* Error Alert */}
           {error && (
             <div className="flex items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4">
@@ -62,47 +75,9 @@ const Index = () => {
             </div>
           )}
 
-          {/* Disclaimer at top */}
-          <Disclaimer />
-
-          {/* Market Summary Stats */}
-          <MarketSummary stocks={stocks} />
-
-          {/* Strength Meter & Sentiment */}
-          <StrengthMeter stocks={stocks} />
-
-          {/* Top Movers Section */}
-          <div>
-            <h2 className="mb-3 text-lg font-semibold text-foreground">Top Movers</h2>
-            <TopMovers stocks={stocks} onStockClick={handleStockClick} />
-          </div>
-
-          {/* Value Charts - Top 20 Highest/Lowest */}
-          <div>
-            <h2 className="mb-3 text-lg font-semibold text-foreground">Value Analysis</h2>
-            <ValueChartSection stocks={stocks} onStockClick={handleStockClick} />
-          </div>
-
-          {/* Sectoral Performance */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-foreground">Sectoral Performance</h2>
-              <Link to="/birds-eye">
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Eye className="h-4 w-4" />
-                  Birds Eye View
-                </Button>
-              </Link>
-            </div>
-            <div className="rounded-lg border border-border bg-card p-4">
-              <SectorPerformance stocks={stocks} />
-            </div>
-          </div>
-
-          {/* Full Market Table */}
-          <div>
-            <h2 className="mb-3 text-lg font-semibold text-foreground">All Stocks</h2>
-            <MarketTable stocks={stocks} isLoading={isLoading} />
+          {/* Birds Eye View */}
+          <div className="rounded-lg border border-border bg-card p-4">
+            <BirdsEyeView stocks={stocks} onStockClick={handleStockClick} />
           </div>
 
           {/* Footer */}
@@ -125,7 +100,7 @@ const Index = () => {
         </div>
       </main>
 
-      {/* Stock Detail Modal for Top Movers */}
+      {/* Stock Detail Modal */}
       <StockDetailModal
         stock={selectedStock}
         isOpen={isModalOpen}
@@ -135,4 +110,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default BirdsEye;
