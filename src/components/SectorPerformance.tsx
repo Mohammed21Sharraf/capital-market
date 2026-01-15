@@ -1,64 +1,15 @@
 import { useMemo } from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { Stock } from "@/types/market";
+import { 
+  getSector, 
+  SECTOR_COLORS, 
+  formatValue,
+  SectorData 
+} from "@/lib/sectorUtils";
 
 interface SectorPerformanceProps {
   stocks: Stock[];
-}
-
-// DSE Sector mapping based on common company naming patterns
-const SECTOR_PATTERNS: Record<string, RegExp[]> = {
-  "Bank": [/BANK/, /BNK/, /ISLAMI/, /JAMUNA/, /MERCANTILE/, /PUBALI/, /RUPALI/, /SOUTHEAST/, /PREMIER/, /EXIM/, /MTBL/, /ALARABANK/, /BRACBANK/, /CITYBANK/, /DHAKA/, /DUTCH/, /FIRST/, /ICB/, /NCC/, /NRBC/, /ONE/, /SHAHJALAL/, /SOCIAL/, /SONALI/, /STANDARD/, /TRUST/, /UCBL/, /UTTARA/],
-  "Pharma": [/PHARMA/, /LAB/, /ACME/, /BEXIMCO/, /SQUARE/, /RENATA/, /IBN/, /ORION/, /GLAXO/, /AVENTIS/, /SANOFI/, /RECKITT/, /FORMULA/, /AMBEE/],
-  "Engineering": [/STEEL/, /ISPAT/, /BSRM/, /GPH/, /KSRM/, /RSRM/, /OLYMPIC/, /SINGER/, /WALTON/, /RUNNER/, /AFTAB/, /LINDE/, /RANGPUR/],
-  "Textile": [/TEX/, /YARN/, /SPINNING/, /WEAVING/, /DENIM/, /COTTON/, /FIBER/, /FABRIC/],
-  "Fuel & Power": [/POWER/, /GAS/, /OIL/, /PETROLEUM/, /JAMUNA/, /PADMA/, /SUMMIT/, /BARKA/, /UNITED/],
-  "Food": [/FOOD/, /DAIRY/, /SUGAR/, /FEED/, /AGRO/, /MILK/, /AMAN/, /OLYMPIC/, /PRAN/],
-  "Cement": [/CEMENT/, /LAFARGE/, /HEIDELBERG/, /PREMIER/, /MEGHNA/, /CONFIDENCE/],
-  "Insurance": [/INS/, /INSURANCE/, /LIFE/, /ASIA/, /CONTINENTAL/, /DELTA/, /EASTERN/, /GLOBE/, /GREEN/, /JANATA/, /MERCANTILE/, /NATIONAL/, /PEOPLES/, /PIONEER/, /PRAGATI/, /PRIME/, /RELIANCE/, /REPUBLIC/, /RUPALI/, /SONAR/, /UNITED/],
-  "IT": [/TECH/, /SOFTWARE/, /IT/, /COMPUTER/, /DIGITAL/, /DATA/, /NET/, /SYSL/, /BDCOM/, /ADNTEL/, /BRACIT/],
-  "Financial": [/FINANCE/, /LEASING/, /CAPITAL/, /INVEST/, /FML/, /LIC/, /IDLC/, /IFIC/, /IPDC/, /LANKA/, /MIDAS/, /NBF/, /PF1/, /UNION/],
-  "Telecom": [/GRAMEENPHONE/, /GP/, /ROBI/, /BANGLALINK/, /TELETALK/],
-  "Mutual Fund": [/MF/, /1ST/, /FUND/, /GROWTH/],
-};
-
-function getSector(symbol: string, name: string): string {
-  const combined = `${symbol} ${name}`.toUpperCase();
-  
-  for (const [sector, patterns] of Object.entries(SECTOR_PATTERNS)) {
-    for (const pattern of patterns) {
-      if (pattern.test(combined)) {
-        return sector;
-      }
-    }
-  }
-  return "Others";
-}
-
-const SECTOR_COLORS: Record<string, string> = {
-  "Bank": "#3b82f6",
-  "Pharma": "#10b981",
-  "Engineering": "#f59e0b",
-  "Textile": "#8b5cf6",
-  "Fuel & Power": "#ef4444",
-  "Food": "#06b6d4",
-  "Cement": "#6b7280",
-  "Insurance": "#ec4899",
-  "IT": "#14b8a6",
-  "Financial": "#f97316",
-  "Telecom": "#a855f7",
-  "Mutual Fund": "#84cc16",
-  "Others": "#64748b",
-};
-
-interface SectorData {
-  name: string;
-  value: number;
-  stocks: number;
-  advancers: number;
-  decliners: number;
-  unchanged: number;
-  avgChange: number;
 }
 
 export function SectorPerformance({ stocks }: SectorPerformanceProps) {
@@ -77,7 +28,7 @@ export function SectorPerformance({ stocks }: SectorPerformanceProps) {
       sectors[sector].stocks.push(stock);
     });
 
-    const result: SectorData[] = Object.entries(sectors)
+    const result: Omit<SectorData, 'stockList'>[] = Object.entries(sectors)
       .map(([name, data]) => {
         const advancers = data.stocks.filter(s => s.change > 0).length;
         const decliners = data.stocks.filter(s => s.change < 0).length;
@@ -101,14 +52,9 @@ export function SectorPerformance({ stocks }: SectorPerformanceProps) {
 
   const totalValue = sectorData.reduce((sum, s) => sum + s.value, 0);
 
-  const formatValue = (value: number) => {
-    if (value >= 1000) return `${(value / 1000).toFixed(2)}B`;
-    return `${value.toFixed(2)}M`;
-  };
-
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
-      const data = payload[0].payload as SectorData;
+      const data = payload[0].payload as Omit<SectorData, 'stockList'>;
       const percentage = ((data.value / totalValue) * 100).toFixed(1);
       
       return (
