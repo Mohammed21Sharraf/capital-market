@@ -152,28 +152,43 @@ export const SECTOR_PATTERNS: Record<string, RegExp[]> = {
   ],
 };
 
-// Vibrant, modern gradient-inspired sector colors
+// Vibrant, modern gradient-inspired sector colors - matching DSE official sector names
 export const SECTOR_COLORS: Record<string, string> = {
-  "Bank": "hsl(217, 91%, 55%)",              // Vivid Blue
-  "Pharmaceuticals": "hsl(160, 84%, 42%)",   // Emerald Green
-  "NBFI": "hsl(32, 95%, 52%)",               // Bright Orange
-  "Insurance": "hsl(330, 81%, 58%)",         // Hot Pink
-  "Telecom": "hsl(271, 81%, 56%)",           // Electric Purple
-  "IT": "hsl(174, 72%, 45%)",                // Teal
-  "Fuel & Power": "hsl(0, 84%, 55%)",        // Vibrant Red
-  "Engineering": "hsl(45, 93%, 52%)",        // Golden Yellow
-  "Textile": "hsl(262, 83%, 58%)",           // Royal Purple
-  "Cement": "hsl(200, 18%, 50%)",            // Steel Gray
-  "Food & Allied": "hsl(187, 85%, 45%)",     // Cyan
-  "Ceramics": "hsl(25, 95%, 55%)",           // Burnt Orange
-  "Paper & Printing": "hsl(142, 71%, 45%)",  // Forest Green
-  "Jute": "hsl(80, 61%, 50%)",               // Olive Green
-  "Tannery": "hsl(15, 75%, 45%)",            // Brown
-  "Travel & Leisure": "hsl(195, 85%, 55%)",  // Sky Blue
-  "Services & Real Estate": "hsl(280, 60%, 55%)", // Lavender
-  "Mutual Fund": "hsl(82, 78%, 45%)",        // Lime Green
-  "Miscellaneous": "hsl(220, 16%, 55%)",     // Neutral Slate
-  "Others": "hsl(215, 20%, 50%)",            // Default Gray
+  // DSE Official Sectors
+  "Bank": "hsl(217, 91%, 55%)",                          // Vivid Blue
+  "Cement": "hsl(200, 18%, 50%)",                        // Steel Gray
+  "Ceramics Sector": "hsl(25, 95%, 55%)",                // Burnt Orange
+  "Corporate Bond": "hsl(280, 45%, 50%)",                // Purple
+  "Debenture": "hsl(300, 40%, 50%)",                     // Magenta
+  "Engineering": "hsl(45, 93%, 52%)",                    // Golden Yellow
+  "Financial Institutions": "hsl(32, 95%, 52%)",         // Bright Orange
+  "Food & Allied": "hsl(187, 85%, 45%)",                 // Cyan
+  "Fuel & Power": "hsl(0, 84%, 55%)",                    // Vibrant Red
+  "IT Sector": "hsl(174, 72%, 45%)",                     // Teal
+  "Insurance": "hsl(330, 81%, 58%)",                     // Hot Pink
+  "Jute": "hsl(80, 61%, 50%)",                           // Olive Green
+  "Miscellaneous": "hsl(220, 16%, 55%)",                 // Neutral Slate
+  "Mutual Funds": "hsl(82, 78%, 45%)",                   // Lime Green
+  "Paper & Printing": "hsl(142, 71%, 45%)",              // Forest Green
+  "Pharmaceuticals & Chemicals": "hsl(160, 84%, 42%)",   // Emerald Green
+  "Services & Real Estate": "hsl(280, 60%, 55%)",        // Lavender
+  "Tannery Industries": "hsl(15, 75%, 45%)",             // Brown
+  "Telecommunication": "hsl(271, 81%, 56%)",             // Electric Purple
+  "Textile": "hsl(262, 83%, 58%)",                       // Royal Purple
+  "Travel & Leisure": "hsl(195, 85%, 55%)",              // Sky Blue
+  "Treasury Bond": "hsl(210, 50%, 45%)",                 // Navy Blue
+  
+  // Legacy/Fallback names for backward compatibility
+  "Pharmaceuticals": "hsl(160, 84%, 42%)",
+  "NBFI": "hsl(32, 95%, 52%)",
+  "Telecom": "hsl(271, 81%, 56%)",
+  "IT": "hsl(174, 72%, 45%)",
+  "Ceramics": "hsl(25, 95%, 55%)",
+  "Tannery": "hsl(15, 75%, 45%)",
+  "Mutual Fund": "hsl(82, 78%, 45%)",
+  
+  // Default
+  "Others": "hsl(215, 20%, 50%)",
 };
 
 export function getSector(symbol: string, name: string): string {

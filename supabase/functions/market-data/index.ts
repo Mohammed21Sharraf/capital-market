@@ -6,12 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface CompanyInfo {
-  name: string;
-  sector: string;
-  category: string;
-}
-
 interface RawStockData {
   symbol: string;
   name: string;
@@ -47,34 +41,19 @@ interface StockData {
 
 type Cached<T> = { data: T; fetchedAt: number };
 
-const CACHE_TTL_MS = 60_000; // 1 minute
-const COMPANY_CACHE_TTL_MS = 10 * 60_000; // 10 minutes
-
-let cachedCompanies: Cached<Record<string, CompanyInfo>> | null = null;
+const CACHE_TTL_MS = 60_000;
 let cachedMarket: Cached<{ rawStocks: RawStockData[]; timestampText?: string }> | null = null;
 
-function stripCommas(s: string) {
-  return s.replace(/,/g, "").trim();
-}
-
+function stripCommas(s: string) { return s.replace(/,/g, "").trim(); }
 function decodeHtmlEntities(input: string) {
-  return input
-    .replace(/&amp;/g, "&")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&#39;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .trim();
+  return input.replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim();
 }
-
 function parseNumber(text: string): number {
   const cleaned = stripCommas(text);
   if (!cleaned || cleaned === "--") return 0;
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : 0;
 }
-
 function parseIntNumber(text: string): number {
   const cleaned = stripCommas(text);
   if (!cleaned || cleaned === "--") return 0;
@@ -85,125 +64,63 @@ function parseIntNumber(text: string): number {
 async function fetchHtml(url: string): Promise<string> {
   const res = await fetch(url, {
     headers: {
-      "user-agent":
-        "Mozilla/5.0 (LovableCloud; DSE-Market-Tracker) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
-      accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+      "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     },
   });
-  if (!res.ok) {
-    throw new Error(`Fetch failed ${res.status} for ${url}`);
-  }
+  if (!res.ok) throw new Error(`Fetch failed ${res.status} for ${url}`);
   return await res.text();
 }
 
-// Parse company listing page to extract symbol, name, sector, and category
-async function getCompanyInfoMap(): Promise<Record<string, CompanyInfo>> {
-  const now = Date.now();
-  if (cachedCompanies && now - cachedCompanies.fetchedAt < COMPANY_CACHE_TTL_MS) {
-    return cachedCompanies.data;
-  }
-
-  const html = await fetchHtml("https://www.dsebd.org/company_listing.php");
-  const map: Record<string, CompanyInfo> = {};
-
-  // Parse table rows to extract company info with sector and category
-  // Table structure: Serial, Trading Code, Company Name, Category, Sector
-  const tableMatch = html.match(/<table[^>]*class="[^"]*table[^"]*"[^>]*>([\s\S]*?)<\/table>/gi);
+// Pattern-based sector detection
+function getSectorFromSymbol(symbol: string): string {
+  const sym = symbol.toUpperCase();
   
-  if (tableMatch) {
-    for (const table of tableMatch) {
-      const rows = table.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || [];
-      
-      for (const row of rows) {
-        // Skip header rows
-        if (row.includes("<th")) continue;
-        
-        const cells = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi) || [];
-        if (cells.length < 5) continue;
-        
-        const extractCellText = (cell: string) => {
-          return decodeHtmlEntities(cell.replace(/<[^>]+>/g, "").trim());
-        };
-        
-        // Extract trading code from link
-        const codeMatch = row.match(/displayCompany\.php\?name=([^"&]+)[^>]*>([^<]*)</i);
-        if (!codeMatch) continue;
-        
-        const symbol = decodeHtmlEntities(codeMatch[2] || codeMatch[1] || "").trim();
-        if (!symbol) continue;
-        
-        const cellTexts = cells.map(extractCellText);
-        
-        // Column indices: 0=Serial, 1=Trading Code, 2=Company Name, 3=Category, 4=Sector
-        const name = cellTexts[2] || symbol;
-        const category = cellTexts[3] || "";
-        const sector = cellTexts[4] || "";
-        
-        map[symbol] = {
-          name,
-          sector,
-          category,
-        };
-      }
-    }
-  }
-
-  // Fallback: use the old regex pattern if table parsing didn't work
-  if (Object.keys(map).length === 0) {
-    const re = /<a\s+href="https:\/\/www\.dsebd\.org\/displayCompany\.php\?name=([^"]+)"[^>]*>\s*([^<]+)\s*<\/a>\s*<span[^>]*>\s*\(([^)]+)\)\s*<br\s*\/?\s*>\s*<\/span>/gi;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(html)) !== null) {
-      const code = decodeHtmlEntities(m[2] || "");
-      const fullName = decodeHtmlEntities(m[3] || "");
-      if (code) {
-        map[code] = {
-          name: fullName || code,
-          sector: "",
-          category: "",
-        };
-      }
-    }
-  }
-
-  console.log(`Parsed ${Object.keys(map).length} companies from listing page`);
-  cachedCompanies = { data: map, fetchedAt: now };
-  return map;
+  if (/BANK|BRACK|NRBC|SBAC|CITY|JAMUNA|MERCAN|SHAHJ|SIBL|SOUTHEAST|STANDB|TRUST|UCBL|UTTARA|PUBALI|RUPALI|PRIME|NBL|NCC|EXIM|EBL|IFIC|ISLAMI|DHAKA|ALARM|ASIAB|FIRST|PADMA|MIDLAND|COMMUN|ALARM|SONARBANG/i.test(sym) && !/MF|FUND/i.test(sym)) return "Bank";
+  if (/CEMENT|LAFARG|HEIDEL|PREMIER|CONFID|SHYAM|MICEM|KPCL/i.test(sym)) return "Cement";
+  if (/CERAMIC|MONNO|RAKCER|SINO|FUWANG|STDCER/i.test(sym)) return "Ceramics Sector";
+  if (/PHARMA|DRUG|ACME|SQUR|RENATA|IBNSINA|ORION|GLAXO|BXPHARMA|ESKAYEF|BEACON|LIBROP|MARICO|NAVANA|SANOFI|RECKITT|FORMULA|ACIFORMULA/i.test(sym)) return "Pharmaceuticals & Chemicals";
+  if (/INSUR|DELTALIFE|DHAKALIFE|EASTERNINS|EASTLANDINS|FAREASTLIF|FIDELITY|GLOBALINS|GREENDELT|JANATALIFE|KARNAPH|MEGHNALIFE|MERCANINS|NATIONALIF|NITOLINS|PARAMOUNT|PEOPLESINS|PHOENIXINS|PIONEERINS|POPULARLIF|PRAGATILIF|PRIMEINS|PROGRELIFE|RELIANCEINS|REPUBLICINS|RUPALIINS|SANDHANINS|SENAKALYAN|SONARLIFE|STANDINS|SUNLIFEINS|UNIONINS|BGIC|AGRANINS|ASIAINS|CENTRALNSC|CONTININS/i.test(sym)) return "Insurance";
+  if (/FINANCE|LEASING|IDLC|IPDC|ISLAMICFIN|LANKABD|MIDAS|NHFIL|PLFSL|PREMF|UNILEAS|DBH|FIRSTFIN|GSP|BIFC|BDFINANCE|FAREASTFIN|ILFSL|ICBAMCL/i.test(sym)) return "Financial Institutions";
+  if (/POWER|ENERGY|DESCO|DPDC|TITASGAS|OIL|PETRO|LINDE|SUMMIT|BARAKA|UPGDCL|SPCL|BGDCL/i.test(sym)) return "Fuel & Power";
+  if (/STEEL|BSRM|GPHI|KSRM|RSRM|WALTON|SINGER|RUNNER|NAVANA|QUASEM|AZIZPIPES|AFTAB|BDAUTO|BATASHOE|LHBL|OLYMPIC|MJLBD|MAXGEN|KAY.?QUE|KDSLTD/i.test(sym)) return "Engineering";
+  if (/TEX|YARN|SPIN|WEAV|DENIM|COTTON|GARMENT|CRESCENT|ENVOY|FAMILY|MAKSONS|MATIN|METRO|MONNOSTAF|PRIMETEX|RAHIM|SAFKO|SAMOR|SHEEP|SQUARETEXT|STYLE|TALLUS|TOKYO|ZAHEEN|ZAFAR|ALHAJ|ANLIMA|APEX|BEXTEX|CMC|CVOPRL|DESHBANDHU|DULAMI|FEKDIL|FOKDIL|GENNEXT|GENERATION|HAMID|HMTEX|HWA|MITHUN|NURANI|SIMTEX|SONARGAON/i.test(sym)) return "Textile";
+  if (/FOOD|DAIRY|SUGAR|AGRO|AMCL|APEXFOODS|BATBC|BENGALBISC|FINEFOODS|GEMINI|IFAD|KOHINOOR|MEGHNA|NATFOOD|RAHIMA|SILCO|ACIFL|BSCCL/i.test(sym)) return "Food & Allied";
+  if (/1ST|MF$|ICB|GRAMEEN|POPULAR1|RELIANCE1|SEBL1|TRUST.*MF|JANATAMF|PRIMFMF|ABB1|AIBL1|CAPM|DBH1|EBL1|EXIMBK|FBFIF|GREENDEL|IFIC1|LRGLOB|MBL1|NCCBL|NLI1|PF1|PHPMF|PRIME1|SEMLLE/i.test(sym)) return "Mutual Funds";
+  if (/TECH|SOFTWARE|COMPUTER|DIGITAL|AAMRA|BDCOM|BRACIT|DAFFODIL|DATASOFT|GENEXIL|INFO|ISLAAMI|LRGLOBAL|SQLTC|ADNTEL/i.test(sym) && !/MF|FUND/i.test(sym)) return "IT Sector";
+  if (/^GP$|TELECOM|ROBI|BANGLALINK|TELETALK/i.test(sym)) return "Telecommunication";
+  if (/JUTE|SONALIPAPR|BJMC|JUTESPINN/i.test(sym)) return "Jute";
+  if (/LEATHER|TANNERY|APEXTAN|BATABD|LEGACY|SAMATALETH|FORTUNE/i.test(sym)) return "Tannery Industries";
+  if (/PAPER|PRINT|KPPL|HRTEX/i.test(sym)) return "Paper & Printing";
+  if (/HOTEL|TRAVEL|RESORT|TOURISM|UNIQUEHOT/i.test(sym)) return "Travel & Leisure";
+  if (/ESTATE|PROPERTY|BDTHAI|ECABLES|EASTERNHOUS|EMERALD/i.test(sym)) return "Services & Real Estate";
+  if (/^ACI$/i.test(sym)) return "Pharmaceuticals & Chemicals";
+  if (/BEXIMCO|ACTIVEFINE|BDLAMPS|MEGCONMIL|NAHEE|NTLTUBES|RANGPUR/i.test(sym)) return "Miscellaneous";
+  
+  return "Others";
 }
 
 function extractTimestampTextFromMarketPage(html: string): string | undefined {
   const m = html.match(/<h2[^>]*class="BodyHead topBodyHead"[^>]*>([\s\S]*?)<\/h2>/i);
   if (!m) return undefined;
-  const raw = m[1]
-    .replace(/<[^>]+>/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  return decodeHtmlEntities(raw);
+  return decodeHtmlEntities(m[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim());
 }
 
-function parseMarketStocks(html: string, companyInfo: Record<string, CompanyInfo>): RawStockData[] {
+function parseMarketStocks(html: string): RawStockData[] {
   const rows: RawStockData[] = [];
-
   const trBlocks = html.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
   
   for (const tr of trBlocks) {
     if (!tr.includes("displayCompany.php?name=")) continue;
-
     const codeMatch = tr.match(/displayCompany\.php\?name=([^"&]+)[^>]*>([^<]*)</i);
     if (!codeMatch) continue;
-
     const symbol = decodeHtmlEntities(codeMatch[2] || codeMatch[1] || "").trim();
     if (!symbol) continue;
-
     const tdMatches = Array.from(tr.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi));
-    const tdTexts = tdMatches.map((x) =>
-      decodeHtmlEntities(x[1].replace(/<[^>]+>/g, "").trim())
-    );
-
+    const tdTexts = tdMatches.map((x) => decodeHtmlEntities(x[1].replace(/<[^>]+>/g, "").trim()));
     if (tdTexts.length < 11) continue;
-
     const firstCell = tdTexts[0].toLowerCase();
     if (firstCell.includes("#") || firstCell.includes("sl") || firstCell.includes("trading")) continue;
-
     const ltp = parseNumber(tdTexts[2]);
     const high = parseNumber(tdTexts[3]);
     const low = parseNumber(tdTexts[4]);
@@ -213,28 +130,10 @@ function parseMarketStocks(html: string, companyInfo: Record<string, CompanyInfo
     const trade = parseIntNumber(tdTexts[8]);
     const valueMn = parseNumber(tdTexts[9]);
     const volume = parseIntNumber(tdTexts[10]);
-
     if (ltp === 0 && high === 0 && low === 0) continue;
-
-    const info = companyInfo[symbol];
     
-    rows.push({
-      symbol,
-      name: info?.name || symbol,
-      sector: info?.sector || "",
-      category: info?.category || "",
-      ltp,
-      high,
-      low,
-      closep,
-      ycp,
-      rawChange,
-      trade,
-      valueMn,
-      volume,
-    });
+    rows.push({ symbol, name: symbol, sector: getSectorFromSymbol(symbol), category: "", ltp, high, low, closep, ycp, rawChange, trade, valueMn, volume });
   }
-
   return rows;
 }
 
@@ -242,125 +141,48 @@ function computeStockData(raw: RawStockData, marketOpen: boolean): StockData {
   const basePrice = marketOpen ? raw.ltp : raw.closep;
   const change = basePrice - raw.ycp;
   const changePercent = raw.ycp !== 0 ? (change / raw.ycp) * 100 : 0;
-
-  return {
-    symbol: raw.symbol,
-    name: raw.name,
-    sector: raw.sector,
-    category: raw.category,
-    ltp: raw.ltp,
-    change: Math.round(change * 100) / 100,
-    changePercent: Number.isFinite(changePercent) ? Math.round(changePercent * 100) / 100 : 0,
-    volume: raw.volume,
-    high: raw.high,
-    low: raw.low,
-    closep: raw.closep,
-    ycp: raw.ycp,
-    trade: raw.trade,
-    valueMn: raw.valueMn,
-  };
+  return { symbol: raw.symbol, name: raw.name, sector: raw.sector, category: raw.category, ltp: raw.ltp, change: Math.round(change * 100) / 100, changePercent: Number.isFinite(changePercent) ? Math.round(changePercent * 100) / 100 : 0, volume: raw.volume, high: raw.high, low: raw.low, closep: raw.closep, ycp: raw.ycp, trade: raw.trade, valueMn: raw.valueMn };
 }
 
 function isMarketOpen(): boolean {
   const now = new Date();
   const bdTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Dhaka" }));
   const day = bdTime.getDay();
-  const hours = bdTime.getHours();
-  const minutes = bdTime.getMinutes();
-  const currentMinutes = hours * 60 + minutes;
-
-  const isTradeDay = day >= 0 && day <= 4;
-  const isTradeHours = currentMinutes >= 600 && currentMinutes <= 870;
-
-  return isTradeDay && isTradeHours;
+  const currentMinutes = bdTime.getHours() * 60 + bdTime.getMinutes();
+  return day >= 0 && day <= 4 && currentMinutes >= 600 && currentMinutes <= 870;
 }
 
 async function getRawMarketSnapshot(): Promise<{ rawStocks: RawStockData[]; timestampText?: string }> {
   const now = Date.now();
-  if (cachedMarket && now - cachedMarket.fetchedAt < CACHE_TTL_MS) {
-    return cachedMarket.data;
-  }
-
-  const [companyInfo, marketHtml] = await Promise.all([
-    getCompanyInfoMap(),
-    fetchHtml("https://www.dsebd.org/latest_share_price_scroll_by_ltp.php"),
-  ]);
-
+  if (cachedMarket && now - cachedMarket.fetchedAt < CACHE_TTL_MS) return cachedMarket.data;
+  const marketHtml = await fetchHtml("https://www.dsebd.org/latest_share_price_scroll_by_ltp.php");
   const timestampText = extractTimestampTextFromMarketPage(marketHtml);
-  const rawStocks = parseMarketStocks(marketHtml, companyInfo);
-
-  if (rawStocks.length === 0) {
-    throw new Error("Failed to parse market data from dsebd.org");
-  }
-
+  const rawStocks = parseMarketStocks(marketHtml);
+  if (rawStocks.length === 0) throw new Error("Failed to parse market data from dsebd.org");
   const data = { rawStocks, timestampText };
   cachedMarket = { data, fetchedAt: now };
   return data;
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     const url = new URL(req.url);
-
     let stockCode = url.searchParams.get("code") || undefined;
-    if (!stockCode && req.method !== "GET") {
-      try {
-        const body = await req.json();
-        if (body && typeof body.code === "string") stockCode = body.code;
-      } catch {
-        // ignore body parse errors
-      }
-    }
-
+    if (!stockCode && req.method !== "GET") { try { const body = await req.json(); if (body?.code) stockCode = body.code; } catch {} }
     console.log(`Market data request - code: ${stockCode || "all"}`);
-
     const { rawStocks, timestampText } = await getRawMarketSnapshot();
     const marketOpen = isMarketOpen();
-
     const stocks = rawStocks.map((raw) => computeStockData(raw, marketOpen));
-
     if (stockCode) {
       const stock = stocks.find((s) => s.symbol.toUpperCase() === stockCode!.toUpperCase());
-      if (!stock) {
-        return new Response(JSON.stringify({ error: "Stock not found" }), {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      return new Response(
-        JSON.stringify({
-          data: stock,
-          marketOpen,
-          timestamp: new Date().toISOString(),
-          sourceTimestampText: timestampText,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      if (!stock) return new Response(JSON.stringify({ error: "Stock not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ data: stock, marketOpen, timestamp: new Date().toISOString(), sourceTimestampText: timestampText }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-
     const sortedStocks = [...stocks].sort((a, b) => a.symbol.localeCompare(b.symbol));
-
-    return new Response(
-      JSON.stringify({
-        data: sortedStocks,
-        marketOpen,
-        timestamp: new Date().toISOString(),
-        sourceTimestampText: timestampText,
-        count: sortedStocks.length,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ data: sortedStocks, marketOpen, timestamp: new Date().toISOString(), sourceTimestampText: timestampText, count: sortedStocks.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     console.error("Error in market-data function:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

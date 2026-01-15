@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { Treemap, ResponsiveContainer, Tooltip } from "recharts";
 import { Stock } from "@/types/market";
-import { getSector, formatValue } from "@/lib/sectorUtils";
+import { formatValue, SECTOR_COLORS } from "@/lib/sectorUtils";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Grid3X3 } from "lucide-react";
 
@@ -144,6 +144,9 @@ const StockTooltip = ({ active, payload }: any) => {
     <div className="rounded-lg border border-border bg-popover/95 backdrop-blur-sm p-3 shadow-xl">
       <div className="font-bold text-foreground">{stock.symbol}</div>
       <div className="text-xs text-muted-foreground">{stock.name}</div>
+      {stock.sector && (
+        <div className="text-xs text-primary font-medium mt-1">{stock.sector}</div>
+      )}
       <div className="mt-2 space-y-1 text-sm">
         <div className="flex justify-between gap-4">
           <span className="text-muted-foreground">Price:</span>
@@ -171,12 +174,13 @@ const StockTooltip = ({ active, payload }: any) => {
 export function BirdsEyeView({ stocks, onStockClick }: BirdsEyeViewProps) {
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
 
-  // Build sector-grouped data
+  // Build sector-grouped data using official sector from API
   const { sectorList, allStockData, filteredStockData } = useMemo(() => {
     const sectorMap: Record<string, { stocks: Stock[]; totalValue: number }> = {};
 
     stocks.forEach(stock => {
-      const sector = getSector(stock.symbol, stock.name);
+      // Use official sector from API, fallback to "Others" if empty
+      const sector = stock.sector?.trim() || "Others";
       if (!sectorMap[sector]) {
         sectorMap[sector] = { stocks: [], totalValue: 0 };
       }
@@ -258,40 +262,46 @@ export function BirdsEyeView({ stocks, onStockClick }: BirdsEyeViewProps) {
 
   return (
     <div className="space-y-3">
-      {/* Sector Header Tabs - Like reference image */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+      {/* Sector Header Tabs - All sectors in a single scrollable row */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-thin">
         <Button
-          variant={selectedSector === null ? "default" : "ghost"}
+          variant={selectedSector === null ? "default" : "outline"}
           size="sm"
           onClick={() => setSelectedSector(null)}
-          className={`shrink-0 text-xs h-8 px-3 ${
+          className={`shrink-0 text-xs h-7 px-2.5 font-medium transition-all ${
             selectedSector === null 
-              ? "bg-gradient-to-r from-green-600 to-green-500 text-white shadow-lg" 
-              : "hover:bg-muted"
+              ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-md border-0" 
+              : "bg-card hover:bg-muted border-border"
           }`}
         >
-          All Sectors
+          All ({stocks.length})
         </Button>
-        {sectorList.slice(0, 12).map((sector) => (
-          <Button
-            key={sector.name}
-            variant={selectedSector === sector.name ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setSelectedSector(sector.name)}
-            className={`shrink-0 text-xs h-8 px-3 gap-1.5 ${
-              selectedSector === sector.name 
-                ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg" 
-                : "hover:bg-muted"
-            }`}
-          >
-            <span 
-              className="w-2 h-2 rounded-full" 
-              style={{ backgroundColor: getGainLossColor(sector.avgChange) }}
-            />
-            {sector.name}
-            <span className="text-[10px] opacity-70">({sector.stocks.length})</span>
-          </Button>
-        ))}
+        {sectorList.map((sector) => {
+          const isSelected = selectedSector === sector.name;
+          const avgChangeColor = sector.avgChange >= 0 ? "bg-emerald-500" : "bg-red-500";
+          const sectorColor = SECTOR_COLORS[sector.name] || SECTOR_COLORS["Others"];
+          
+          return (
+            <Button
+              key={sector.name}
+              variant={isSelected ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedSector(sector.name)}
+              className={`shrink-0 text-xs h-7 px-2.5 gap-1.5 font-medium transition-all ${
+                isSelected 
+                  ? "shadow-md border-0 text-white" 
+                  : "bg-card hover:bg-muted border-border"
+              }`}
+              style={isSelected ? { backgroundColor: sectorColor } : undefined}
+            >
+              <span 
+                className={`w-1.5 h-1.5 rounded-full ${avgChangeColor}`}
+              />
+              <span className="max-w-[120px] truncate">{sector.name}</span>
+              <span className="text-[10px] opacity-70">({sector.stocks.length})</span>
+            </Button>
+          );
+        })}
       </div>
 
       {/* Legend */}
