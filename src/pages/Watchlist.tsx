@@ -7,7 +7,7 @@ import { Stock, StockFundamentals } from "@/types/market";
 import { supabase } from "@/integrations/supabase/client";
 import { WatchlistStockCard } from "@/components/watchlist/WatchlistStockCard";
 import { PriceAlertDialog } from "@/components/watchlist/PriceAlertDialog";
-import { StockDetailModal } from "@/components/StockDetailModal";
+import { WatchlistDetailModal } from "@/components/watchlist/WatchlistDetailModal";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
@@ -230,10 +230,25 @@ const Watchlist = () => {
       />
 
       {/* Stock Detail Modal */}
-      <StockDetailModal
+      <WatchlistDetailModal
         stock={detailStock}
+        fundamentals={detailStock ? fundamentals[detailStock.symbol] : undefined}
+        isLoadingFundamentals={detailStock ? loadingSymbols.has(detailStock.symbol) : false}
+        alerts={detailStock ? alerts.filter((a) => a.symbol === detailStock.symbol) : []}
         isOpen={!!detailStock}
         onClose={() => setDetailStock(null)}
+        onRemoveFromWatchlist={() => {
+          if (detailStock) {
+            removeFromWatchlist(detailStock.symbol);
+            toast.info(`${detailStock.symbol} removed from watchlist`);
+            setDetailStock(null);
+          }
+        }}
+        onAddAlert={() => {
+          if (detailStock) {
+            setAlertDialogStock(detailStock);
+          }
+        }}
       />
     </div>
   );
