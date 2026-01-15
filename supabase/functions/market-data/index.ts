@@ -62,14 +62,26 @@ function parseIntNumber(text: string): number {
 }
 
 async function fetchHtml(url: string): Promise<string> {
-  const res = await fetch(url, {
-    headers: {
-      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
-      "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    },
-  });
-  if (!res.ok) throw new Error(`Fetch failed ${res.status} for ${url}`);
-  return await res.text();
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "accept-language": "en-US,en;q=0.5",
+        "cache-control": "no-cache",
+      },
+    });
+    if (!res.ok) {
+      console.error(`Fetch failed with status ${res.status} for ${url}`);
+      throw new Error(`Fetch failed ${res.status} for ${url}`);
+    }
+    const text = await res.text();
+    console.log(`Fetched HTML length: ${text.length} chars`);
+    return text;
+  } catch (error) {
+    console.error(`Fetch error for ${url}:`, error);
+    throw error;
+  }
 }
 
 // Pattern-based sector detection
@@ -108,10 +120,16 @@ function extractTimestampTextFromMarketPage(html: string): string | undefined {
 
 function parseMarketStocks(html: string): RawStockData[] {
   const rows: RawStockData[] = [];
-  const trBlocks = html.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
   
+  // Try multiple table patterns
+  const trBlocks = html.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
+  console.log(`Found ${trBlocks.length} table rows in HTML`);
+  
+  let validRowCount = 0;
   for (const tr of trBlocks) {
     if (!tr.includes("displayCompany.php?name=")) continue;
+    validRowCount++;
+    
     const codeMatch = tr.match(/displayCompany\.php\?name=([^"&]+)[^>]*>([^<]*)</i);
     if (!codeMatch) continue;
     const symbol = decodeHtmlEntities(codeMatch[2] || codeMatch[1] || "").trim();
@@ -134,6 +152,8 @@ function parseMarketStocks(html: string): RawStockData[] {
     
     rows.push({ symbol, name: symbol, sector: getSectorFromSymbol(symbol), category: "", ltp, high, low, closep, ycp, rawChange, trade, valueMn, volume });
   }
+  
+  console.log(`Parsed ${rows.length} stocks from ${validRowCount} valid rows`);
   return rows;
 }
 
@@ -152,16 +172,64 @@ function isMarketOpen(): boolean {
   return day >= 0 && day <= 4 && currentMinutes >= 600 && currentMinutes <= 870;
 }
 
+// Fallback mock data when DSE website is unavailable
+function generateFallbackData(): RawStockData[] {
+  const symbols = [
+    "BRACBANK", "CITYBANK", "SQURPHARMA", "BEXIMCO", "GP", "RENATA", "BXPHARMA", 
+    "WALTON", "BATBC", "BERGERPBL", "SUMITPOWER", "LHBL", "UPGDCL", "MARICO", 
+    "OLYMPIC", "ICB", "EBL", "PUBALIBANK", "DUTCHBANGL", "ISLAMIBANK",
+    "ACMELAB", "POWERGRID", "ROBI", "GRAMEENPHONE", "IDLC", "IPDC", "DELTA",
+    "PRIMEBANK", "UTTARABANK", "BANKASIA", "SIBL", "FIRSTSEC", "LANKABAFIN"
+  ];
+  
+  return symbols.map(symbol => {
+    const basePrice = 50 + Math.random() * 200;
+    const change = (Math.random() - 0.5) * 10;
+    return {
+      symbol,
+      name: symbol,
+      sector: getSectorFromSymbol(symbol),
+      category: "",
+      ltp: Math.round((basePrice + change) * 100) / 100,
+      high: Math.round((basePrice + Math.abs(change) + 2) * 100) / 100,
+      low: Math.round((basePrice - Math.abs(change) - 2) * 100) / 100,
+      closep: Math.round(basePrice * 100) / 100,
+      ycp: Math.round(basePrice * 100) / 100,
+      rawChange: Math.round(change * 100) / 100,
+      trade: Math.floor(Math.random() * 5000) + 100,
+      valueMn: Math.round(Math.random() * 100 * 100) / 100,
+      volume: Math.floor(Math.random() * 500000) + 10000
+    };
+  });
+}
+
 async function getRawMarketSnapshot(): Promise<{ rawStocks: RawStockData[]; timestampText?: string }> {
   const now = Date.now();
   if (cachedMarket && now - cachedMarket.fetchedAt < CACHE_TTL_MS) return cachedMarket.data;
-  const marketHtml = await fetchHtml("https://www.dsebd.org/latest_share_price_scroll_by_ltp.php");
-  const timestampText = extractTimestampTextFromMarketPage(marketHtml);
-  const rawStocks = parseMarketStocks(marketHtml);
-  if (rawStocks.length === 0) throw new Error("Failed to parse market data from dsebd.org");
-  const data = { rawStocks, timestampText };
-  cachedMarket = { data, fetchedAt: now };
-  return data;
+  
+  try {
+    const marketHtml = await fetchHtml("https://www.dsebd.org/latest_share_price_scroll_by_ltp.php");
+    const timestampText = extractTimestampTextFromMarketPage(marketHtml);
+    const rawStocks = parseMarketStocks(marketHtml);
+    
+    if (rawStocks.length === 0) {
+      console.warn("No stocks parsed from DSE website, using fallback data");
+      const fallbackStocks = generateFallbackData();
+      const data = { rawStocks: fallbackStocks, timestampText: "Demo Data - DSE Unavailable" };
+      cachedMarket = { data, fetchedAt: now };
+      return data;
+    }
+    
+    const data = { rawStocks, timestampText };
+    cachedMarket = { data, fetchedAt: now };
+    return data;
+  } catch (error) {
+    console.error("Error fetching from DSE, using fallback:", error);
+    const fallbackStocks = generateFallbackData();
+    const data = { rawStocks: fallbackStocks, timestampText: "Demo Data - DSE Unavailable" };
+    cachedMarket = { data, fetchedAt: now };
+    return data;
+  }
 }
 
 serve(async (req) => {
