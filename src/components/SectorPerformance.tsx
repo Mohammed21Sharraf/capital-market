@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { Stock } from "@/types/market";
 import { 
-  getSector, 
   SECTOR_COLORS, 
   formatValue,
   SectorData 
@@ -20,7 +19,8 @@ export function SectorPerformance({ stocks }: SectorPerformanceProps) {
     }> = {};
 
     stocks.forEach(stock => {
-      const sector = getSector(stock.symbol, stock.name);
+      // Use official sector from API, fallback to "Others" if empty
+      const sector = stock.sector?.trim() || "Others";
       if (!sectors[sector]) {
         sectors[sector] = { value: 0, stocks: [] };
       }
@@ -33,7 +33,9 @@ export function SectorPerformance({ stocks }: SectorPerformanceProps) {
         const advancers = data.stocks.filter(s => s.change > 0).length;
         const decliners = data.stocks.filter(s => s.change < 0).length;
         const unchanged = data.stocks.filter(s => s.change === 0).length;
-        const avgChange = data.stocks.reduce((sum, s) => sum + s.changePercent, 0) / data.stocks.length;
+        const avgChange = data.stocks.length > 0 
+          ? data.stocks.reduce((sum, s) => sum + s.changePercent, 0) / data.stocks.length
+          : 0;
         
         return {
           name,
@@ -55,7 +57,7 @@ export function SectorPerformance({ stocks }: SectorPerformanceProps) {
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload as Omit<SectorData, 'stockList'>;
-      const percentage = ((data.value / totalValue) * 100).toFixed(1);
+      const percentage = totalValue > 0 ? ((data.value / totalValue) * 100).toFixed(1) : "0";
       
       return (
         <div className="rounded-lg border border-border bg-card p-3 shadow-lg">
@@ -127,7 +129,7 @@ export function SectorPerformance({ stocks }: SectorPerformanceProps) {
       {/* Sector List */}
       <div className="space-y-2 overflow-auto pr-2" style={{ maxHeight: 320 }}>
         {sectorData.map((sector) => {
-          const percentage = ((sector.value / totalValue) * 100).toFixed(1);
+          const percentage = totalValue > 0 ? ((sector.value / totalValue) * 100).toFixed(1) : "0";
           return (
             <div
               key={sector.name}
