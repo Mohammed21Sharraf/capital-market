@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Loader2 } from "lucide-react";
 import { Stock } from "@/types/market";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface AddPortfolioDialogProps {
   stocks: Stock[];
+  isLoading?: boolean;
   onAdd: (item: {
     symbol: string;
     quantity: number;
@@ -20,15 +21,17 @@ interface AddPortfolioDialogProps {
   }) => boolean;
 }
 
-export function AddPortfolioDialog({ stocks, onAdd }: AddPortfolioDialogProps) {
+export function AddPortfolioDialog({ stocks, isLoading, onAdd }: AddPortfolioDialogProps) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
+  const [manualSymbol, setManualSymbol] = useState("");
   const [quantity, setQuantity] = useState("");
   const [costPrice, setCostPrice] = useState("");
   const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [useManualEntry, setUseManualEntry] = useState(false);
 
   const filteredStocks = stocks.filter(
     (stock) =>
@@ -44,8 +47,15 @@ export function AddPortfolioDialog({ stocks, onAdd }: AddPortfolioDialogProps) {
   };
 
   const handleSubmit = () => {
-    if (!selectedStock) {
-      toast.error("Please select a stock");
+    const symbolToUse = useManualEntry ? manualSymbol.trim().toUpperCase() : selectedStock?.symbol;
+    
+    if (!symbolToUse) {
+      toast.error("Please select or enter a stock symbol");
+      return;
+    }
+
+    if (symbolToUse.length < 1 || symbolToUse.length > 20) {
+      toast.error("Invalid stock symbol");
       return;
     }
 
@@ -68,7 +78,7 @@ export function AddPortfolioDialog({ stocks, onAdd }: AddPortfolioDialogProps) {
     }
 
     const success = onAdd({
-      symbol: selectedStock.symbol,
+      symbol: symbolToUse,
       quantity: qty,
       costPrice: cost,
       purchaseDate,
@@ -76,7 +86,7 @@ export function AddPortfolioDialog({ stocks, onAdd }: AddPortfolioDialogProps) {
     });
 
     if (success) {
-      toast.success(`Added ${selectedStock.symbol} to portfolio`);
+      toast.success(`Added ${symbolToUse} to portfolio`);
       resetForm();
       setOpen(false);
     } else {
@@ -87,14 +97,19 @@ export function AddPortfolioDialog({ stocks, onAdd }: AddPortfolioDialogProps) {
   const resetForm = () => {
     setSearchQuery("");
     setSelectedStock(null);
+    setManualSymbol("");
     setQuantity("");
     setCostPrice("");
     setPurchaseDate(new Date().toISOString().split("T")[0]);
     setNotes("");
+    setUseManualEntry(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      setOpen(isOpen);
+      if (!isOpen) resetForm();
+    }}>
       <DialogTrigger asChild>
         <Button className="gap-2">
           <Plus className="h-4 w-4" />
@@ -106,43 +121,102 @@ export function AddPortfolioDialog({ stocks, onAdd }: AddPortfolioDialogProps) {
           <DialogTitle>Add to Portfolio</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
-          {/* Stock Search */}
+          {/* Stock Search or Manual Entry */}
           <div className="space-y-2">
-            <Label>Stock</Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search stocks..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
+            <div className="flex items-center justify-between">
+              <Label>Stock</Label>
+              <button
+                type="button"
+                onClick={() => {
+                  setUseManualEntry(!useManualEntry);
                   setSelectedStock(null);
-                  setShowDropdown(true);
+                  setSearchQuery("");
+                  setManualSymbol("");
                 }}
-                onFocus={() => setShowDropdown(true)}
-                className="pl-9"
-              />
-              {showDropdown && searchQuery && filteredStocks.length > 0 && (
-                <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-48 overflow-auto rounded-md border border-border bg-popover shadow-lg">
-                  {filteredStocks.map((stock) => (
-                    <button
-                      key={stock.symbol}
-                      onClick={() => handleSelectStock(stock)}
-                      className={cn(
-                        "flex w-full items-center justify-between px-3 py-2 text-left hover:bg-accent",
-                        selectedStock?.symbol === stock.symbol && "bg-accent"
-                      )}
-                    >
-                      <div>
-                        <span className="font-medium">{stock.symbol}</span>
-                        <span className="ml-2 text-xs text-muted-foreground">{stock.sector}</span>
-                      </div>
-                      <span className="text-sm">৳{stock.ltp.toFixed(2)}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
+                className="text-xs text-primary hover:underline"
+              >
+                {useManualEntry ? "Search stocks" : "Enter manually"}
+              </button>
             </div>
+            
+            {useManualEntry ? (
+              <Input
+                placeholder="Enter stock symbol (e.g., BRACBANK)"
+                value={manualSymbol}
+                onChange={(e) => setManualSymbol(e.target.value.toUpperCase().slice(0, 20))}
+                className="uppercase"
+              />
+            ) : (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder={isLoading ? "Loading stocks..." : "Search stocks..."}
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setSelectedStock(null);
+                    setShowDropdown(true);
+                  }}
+                  onFocus={() => setShowDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                  className="pl-9"
+                  disabled={isLoading}
+                />
+                {isLoading && (
+                  <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                )}
+                
+                {showDropdown && searchQuery && !isLoading && (
+                  <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-48 overflow-auto rounded-md border border-border bg-popover shadow-lg">
+                    {filteredStocks.length > 0 ? (
+                      filteredStocks.map((stock) => (
+                        <button
+                          key={stock.symbol}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleSelectStock(stock)}
+                          className={cn(
+                            "flex w-full items-center justify-between px-3 py-2 text-left hover:bg-accent",
+                            selectedStock?.symbol === stock.symbol && "bg-accent"
+                          )}
+                        >
+                          <div>
+                            <span className="font-medium">{stock.symbol}</span>
+                            <span className="ml-2 text-xs text-muted-foreground">{stock.sector}</span>
+                          </div>
+                          <span className="text-sm">৳{stock.ltp.toFixed(2)}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-3 py-4 text-center text-sm text-muted-foreground">
+                        No stocks found. Try{" "}
+                        <button
+                          type="button"
+                          onClick={() => setUseManualEntry(true)}
+                          className="text-primary hover:underline"
+                        >
+                          manual entry
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {!isLoading && stocks.length === 0 && !showDropdown && (
+                  <p className="text-xs text-amber-500 mt-1">
+                    Market data unavailable.{" "}
+                    <button
+                      type="button"
+                      onClick={() => setUseManualEntry(true)}
+                      className="text-primary hover:underline"
+                    >
+                      Enter manually
+                    </button>
+                  </p>
+                )}
+              </div>
+            )}
+            
             {selectedStock && (
               <p className="text-xs text-muted-foreground">
                 Current Price: ৳{selectedStock.ltp.toFixed(2)}
@@ -202,7 +276,7 @@ export function AddPortfolioDialog({ stocks, onAdd }: AddPortfolioDialogProps) {
           </div>
 
           {/* Total Investment Preview */}
-          {quantity && costPrice && (
+          {quantity && costPrice && !isNaN(parseFloat(quantity)) && !isNaN(parseFloat(costPrice)) && (
             <div className="rounded-lg bg-secondary/50 p-3">
               <p className="text-sm text-muted-foreground">Total Investment</p>
               <p className="text-lg font-bold">

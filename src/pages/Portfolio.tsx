@@ -80,7 +80,7 @@ const Portfolio = () => {
                   </AlertDialogContent>
                 </AlertDialog>
               )}
-              <AddPortfolioDialog stocks={stocks} onAdd={addItem} />
+              <AddPortfolioDialog stocks={stocks} isLoading={isLoadingStocks} onAdd={addItem} />
             </div>
           </div>
         </div>
@@ -110,7 +110,7 @@ const Portfolio = () => {
                 Start tracking your investments by adding stocks with your purchase price and quantity.
                 All data is saved locally in your browser.
               </p>
-              <AddPortfolioDialog stocks={stocks} onAdd={addItem} />
+              <AddPortfolioDialog stocks={stocks} isLoading={isLoadingStocks} onAdd={addItem} />
             </div>
           ) : (
             <div className="space-y-4">
