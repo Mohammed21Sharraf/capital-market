@@ -24,6 +24,7 @@ const Portfolio = () => {
   const { portfolio, isLoaded, addItem, updateItem, removeItem, clearPortfolio } = usePortfolio();
   const { stocks, isLoading: isLoadingStocks } = useMarketData();
 
+  const isInitialStocksLoading = isLoadingStocks && stocks.length === 0;
   const stockMap = new Map(stocks.map((s) => [s.symbol, s]));
 
   const handleClearAll = () => {
@@ -80,7 +81,7 @@ const Portfolio = () => {
                   </AlertDialogContent>
                 </AlertDialog>
               )}
-              <AddPortfolioDialog stocks={stocks} isLoading={isLoadingStocks} onAdd={addItem} />
+              <AddPortfolioDialog stocks={stocks} isLoading={isInitialStocksLoading} onAdd={addItem} />
             </div>
           </div>
         </div>
@@ -94,7 +95,7 @@ const Portfolio = () => {
           )}
 
           {/* Portfolio List */}
-          {!isLoaded || isLoadingStocks ? (
+          {!isLoaded ? (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-40 w-full rounded-lg" />
@@ -110,7 +111,7 @@ const Portfolio = () => {
                 Start tracking your investments by adding stocks with your purchase price and quantity.
                 All data is saved locally in your browser.
               </p>
-              <AddPortfolioDialog stocks={stocks} isLoading={isLoadingStocks} onAdd={addItem} />
+              <AddPortfolioDialog stocks={stocks} isLoading={isInitialStocksLoading} onAdd={addItem} />
             </div>
           ) : (
             <div className="space-y-4">
