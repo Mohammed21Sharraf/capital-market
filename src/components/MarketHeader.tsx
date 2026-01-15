@@ -1,10 +1,11 @@
-import { RefreshCw, TrendingUp, Clock, Activity, Zap, Star, Eye } from "lucide-react";
+import { RefreshCw, TrendingUp, Clock, Activity, Zap, Star, Eye, Briefcase } from "lucide-react";
 import { Link } from "react-router-dom";
 import { MarketStatus, Stock } from "@/types/market";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { StockSearch } from "./StockSearch";
 import { useWatchlist } from "@/hooks/useWatchlist";
+import { usePortfolio } from "@/hooks/usePortfolio";
 
 interface MarketHeaderProps {
   status: MarketStatus;
@@ -26,6 +27,7 @@ export function MarketHeader({
   onStockSelect,
 }: MarketHeaderProps) {
   const { watchlist } = useWatchlist();
+  const { portfolio } = usePortfolio();
 
   return (
     <header className="border-b border-border/50 bg-gradient-to-r from-card via-card to-card/80 px-4 py-3 md:px-6 backdrop-blur-sm">
@@ -64,6 +66,21 @@ export function MarketHeader({
                 {watchlist.length > 0 && (
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
                     {watchlist.length}
+                  </span>
+                )}
+              </Button>
+            </Link>
+            <Link to="/portfolio">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="gap-1.5 rounded-full px-3 hover:bg-primary/10 hover:text-primary transition-colors"
+              >
+                <Briefcase className="h-4 w-4" />
+                <span className="hidden sm:inline">Portfolio</span>
+                {portfolio.length > 0 && (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-white text-[10px] font-bold">
+                    {portfolio.length}
                   </span>
                 )}
               </Button>
