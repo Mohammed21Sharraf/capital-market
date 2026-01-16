@@ -35,6 +35,14 @@ export interface StockFundamentals {
   category?: string;
 }
 
+export interface StockNews {
+  title: string;
+  source: string;
+  url: string;
+  publishedAt: string;
+  summary?: string;
+}
+
 export interface MarketStatus {
   isOpen: boolean;
   lastUpdated: Date;

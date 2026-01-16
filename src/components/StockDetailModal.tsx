@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, Minus, BarChart3, Activity, DollarSign, ArrowUpDown, Building2, Tag, Loader2, Star } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, BarChart3, Activity, DollarSign, ArrowUpDown, Building2, Tag, Loader2, Star, Newspaper, ExternalLink, Clock } from "lucide-react";
 import { Stock } from "@/types/market";
 import { cn } from "@/lib/utils";
 import {
@@ -8,13 +8,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { useStockFundamentals } from "@/hooks/useStockFundamentals";
+import { useStockNews } from "@/hooks/useStockNews";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { HistoricalChart } from "@/components/watchlist/HistoricalChart";
 import { useWatchlist } from "@/hooks/useWatchlist";
-
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 interface StockDetailModalProps {
   stock: Stock | null;
   isOpen: boolean;
@@ -23,16 +24,21 @@ interface StockDetailModalProps {
 
 export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalProps) {
   const { fundamentals, isLoading: loadingFundamentals, fetchFundamentals, clearFundamentals } = useStockFundamentals();
+  const { news, isLoading: loadingNews, fetchNews, clearNews } = useStockNews();
   const { isInWatchlist, toggleWatchlist } = useWatchlist();
+  const [activeTab, setActiveTab] = useState("fundamentals");
 
-  // Fetch fundamentals when modal opens
+  // Fetch fundamentals and news when modal opens
   useEffect(() => {
     if (isOpen && stock) {
       fetchFundamentals(stock.symbol);
+      fetchNews(stock.symbol);
     } else {
       clearFundamentals();
+      clearNews();
+      setActiveTab("fundamentals");
     }
-  }, [isOpen, stock?.symbol, fetchFundamentals, clearFundamentals]);
+  }, [isOpen, stock?.symbol, fetchFundamentals, clearFundamentals, fetchNews, clearNews]);
 
   // Calculate day range position (0-100)
   const dayRangePosition = useMemo(() => {
@@ -267,36 +273,81 @@ export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalPro
 
           <Separator />
 
-          {/* Fundamental Data Section */}
-          <div>
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <h3 className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-muted-foreground">Fundamentals</h3>
-              {loadingFundamentals && <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin text-muted-foreground" />}
-            </div>
-            
-            {loadingFundamentals ? (
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="animate-pulse rounded-lg bg-muted/50 p-2 sm:p-3">
-                    <div className="h-2.5 w-10 bg-muted rounded mb-1.5"></div>
-                    <div className="h-4 w-14 bg-muted rounded"></div>
+          {/* Tabs for Fundamentals and News */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-3">
+              <TabsTrigger value="fundamentals" className="text-xs sm:text-sm gap-1.5">
+                <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4" />
+                Fundamentals
+              </TabsTrigger>
+              <TabsTrigger value="news" className="text-xs sm:text-sm gap-1.5">
+                <Newspaper className="h-3 w-3 sm:h-4 sm:w-4" />
+                News
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Fundamentals Tab */}
+            <TabsContent value="fundamentals" className="mt-0">
+              <div>
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <h3 className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-muted-foreground">Fundamentals</h3>
+                  {loadingFundamentals && <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin text-muted-foreground" />}
+                </div>
+                
+                {loadingFundamentals ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
+                    {[...Array(6)].map((_, i) => (
+                      <div key={i} className="animate-pulse rounded-lg bg-muted/50 p-2 sm:p-3">
+                        <div className="h-2.5 w-10 bg-muted rounded mb-1.5"></div>
+                        <div className="h-4 w-14 bg-muted rounded"></div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                ) : fundamentals ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3">
+                    <FundamentalCard label="Market Cap" value={formatMarketCap(fundamentals.marketCap)} />
+                    <FundamentalCard label="P/E Ratio" value={fundamentals.pe ? fundamentals.pe.toFixed(2) : "—"} />
+                    <FundamentalCard label="EPS" value={fundamentals.eps ? `৳${fundamentals.eps.toFixed(2)}` : "—"} valueClass={fundamentals.eps ? (fundamentals.eps < 0 ? "text-price-down" : fundamentals.eps > 0 ? "text-price-up" : "") : ""} />
+                    <FundamentalCard label="NAV" value={fundamentals.nav ? `৳${fundamentals.nav.toFixed(2)}` : "—"} />
+                    <FundamentalCard label="Shares" value={fundamentals.totalShares ? formatSharesCount(fundamentals.totalShares) : "—"} />
+                    <FundamentalCard label="52W High" value={fundamentals.yearHigh ? `৳${formatNumber(fundamentals.yearHigh)}` : "—"} valueClass="text-price-up" />
+                    <FundamentalCard label="52W Low" value={fundamentals.yearLow ? `৳${formatNumber(fundamentals.yearLow)}` : "—"} valueClass="text-price-down" />
+                  </div>
+                ) : (
+                  <p className="text-xs sm:text-sm text-muted-foreground text-center py-3 sm:py-4">Fundamental data unavailable</p>
+                )}
               </div>
-            ) : fundamentals ? (
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3">
-                <FundamentalCard label="Market Cap" value={formatMarketCap(fundamentals.marketCap)} />
-                <FundamentalCard label="P/E Ratio" value={fundamentals.pe ? fundamentals.pe.toFixed(2) : "—"} />
-                <FundamentalCard label="EPS" value={fundamentals.eps ? `৳${fundamentals.eps.toFixed(2)}` : "—"} valueClass={fundamentals.eps ? (fundamentals.eps < 0 ? "text-price-down" : fundamentals.eps > 0 ? "text-price-up" : "") : ""} />
-                <FundamentalCard label="NAV" value={fundamentals.nav ? `৳${fundamentals.nav.toFixed(2)}` : "—"} />
-                <FundamentalCard label="Shares" value={fundamentals.totalShares ? formatSharesCount(fundamentals.totalShares) : "—"} />
-                <FundamentalCard label="52W High" value={fundamentals.yearHigh ? `৳${formatNumber(fundamentals.yearHigh)}` : "—"} valueClass="text-price-up" />
-                <FundamentalCard label="52W Low" value={fundamentals.yearLow ? `৳${formatNumber(fundamentals.yearLow)}` : "—"} valueClass="text-price-down" />
+            </TabsContent>
+
+            {/* News Tab */}
+            <TabsContent value="news" className="mt-0">
+              <div>
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <h3 className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-muted-foreground">Latest News & Announcements</h3>
+                  {loadingNews && <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin text-muted-foreground" />}
+                </div>
+                
+                {loadingNews ? (
+                  <div className="space-y-2">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="animate-pulse rounded-lg bg-muted/50 p-3">
+                        <div className="h-3 w-3/4 bg-muted rounded mb-2"></div>
+                        <div className="h-2 w-1/2 bg-muted rounded"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : news && news.length > 0 ? (
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {news.map((item, index) => (
+                      <NewsCard key={index} news={item} />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs sm:text-sm text-muted-foreground text-center py-3 sm:py-4">No news available</p>
+                )}
               </div>
-            ) : (
-              <p className="text-xs sm:text-sm text-muted-foreground text-center py-3 sm:py-4">Fundamental data unavailable</p>
-            )}
-          </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </DialogContent>
     </Dialog>
@@ -343,5 +394,39 @@ function FundamentalCard({
         {value}
       </p>
     </div>
+  );
+}
+
+function NewsCard({ news }: { news: { title: string; source: string; url: string; publishedAt: string; summary?: string } }) {
+  return (
+    <a
+      href={news.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block rounded-lg border border-border bg-background p-3 hover:bg-muted/50 transition-colors group"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <h4 className="text-xs sm:text-sm font-medium text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+            {news.title}
+          </h4>
+          {news.summary && (
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 line-clamp-2">
+              {news.summary}
+            </p>
+          )}
+          <div className="flex items-center gap-2 mt-2">
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+              {news.source}
+            </Badge>
+            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <Clock className="h-2.5 w-2.5" />
+              {news.publishedAt}
+            </span>
+          </div>
+        </div>
+        <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0 mt-0.5" />
+      </div>
+    </a>
   );
 }
