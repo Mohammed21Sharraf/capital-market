@@ -30,7 +30,56 @@ function decodeHtmlEntities(input: string): string {
     .replace(/&ndash;/g, "-")
     .replace(/&mdash;/g, "-")
     .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<[^>]+>/g, "")
     .trim();
+}
+
+function formatDate(dateStr: string): string {
+  // Try to parse various date formats and return a consistent format
+  try {
+    // Handle formats like "16-Jan-2026", "16/01/2026", etc.
+    const months: { [key: string]: number } = {
+      'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'may': 4, 'jun': 5,
+      'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11
+    };
+    
+    // Try DD-MMM-YYYY format
+    const dmy = dateStr.match(/(\d{1,2})[-\/](\w{3})[-\/](\d{2,4})/i);
+    if (dmy) {
+      const day = parseInt(dmy[1]);
+      const month = months[dmy[2].toLowerCase()];
+      let year = parseInt(dmy[3]);
+      if (year < 100) year += 2000;
+      
+      const date = new Date(year, month, day);
+      return date.toLocaleDateString('en-US', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      });
+    }
+    
+    // Try DD/MM/YYYY format
+    const dmyNum = dateStr.match(/(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/);
+    if (dmyNum) {
+      const day = parseInt(dmyNum[1]);
+      const month = parseInt(dmyNum[2]) - 1;
+      let year = parseInt(dmyNum[3]);
+      if (year < 100) year += 2000;
+      
+      const date = new Date(year, month, day);
+      return date.toLocaleDateString('en-US', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      });
+    }
+    
+    return dateStr;
+  } catch {
+    return dateStr;
+  }
 }
 
 async function fetchHtml(url: string): Promise<string> {
@@ -64,70 +113,73 @@ async function fetchStockNews(symbol: string): Promise<StockNews[]> {
     // Fetch from DSE news archive page
     const html = await fetchHtml(newsArchiveUrl);
     
-    // Parse news items from the archive - look for rows containing the symbol
-    // The news archive has a table structure with date, company, and news content
-    const tableMatch = html.match(/<table[^>]*class[^>]*>[\s\S]*?<\/table>/gi);
+    // Parse news items from the archive
+    // The DSE news archive typically has news in table format
+    const tableMatches = html.match(/<table[^>]*>[\s\S]*?<\/table>/gi);
     
-    if (tableMatch) {
-      for (const table of tableMatch) {
+    if (tableMatches) {
+      for (const table of tableMatches) {
         const rows = table.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
         
         for (const row of rows) {
           // Check if this row contains news for the requested symbol
-          const symbolRegex = new RegExp(`\\b${symbol}\\b`, 'i');
+          const symbolRegex = new RegExp(`\\b${symbol.toUpperCase()}\\b`, 'i');
           if (!symbolRegex.test(row)) continue;
           
-          // Extract date - usually in first column
-          const dateMatch = row.match(/(\d{1,2}[-\/]\w{3}[-\/]\d{2,4}|\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i);
-          
-          // Extract news link and title
-          const linkMatch = row.match(/<a[^>]*href=["']([^"']+)["'][^>]*>([^<]+)<\/a>/i);
-          
-          // Extract text content from cells
+          // Extract all cell contents
           const cells = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi) || [];
+          
+          let date = "";
           let newsContent = "";
           
           for (const cell of cells) {
-            const cellText = cell.replace(/<[^>]+>/g, '').trim();
-            if (cellText.length > 20 && !cellText.match(/^\d{1,2}[-\/]/)) {
+            const cellText = decodeHtmlEntities(cell);
+            
+            // Check if this is a date cell
+            const dateMatch = cellText.match(/(\d{1,2}[-\/]\w{3}[-\/]\d{2,4}|\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i);
+            if (dateMatch && !date) {
+              date = formatDate(dateMatch[1]);
+              continue;
+            }
+            
+            // If cell has substantial content, it's likely the news
+            if (cellText.length > 30 && !dateMatch) {
               newsContent = cellText;
-              break;
             }
           }
           
-          if (newsContent || linkMatch) {
-            const title = linkMatch ? decodeHtmlEntities(linkMatch[2]) : decodeHtmlEntities(newsContent.substring(0, 200));
-            const url = linkMatch ? (linkMatch[1].startsWith('http') ? linkMatch[1] : `https://www.dsebd.org/${linkMatch[1]}`) : newsArchiveUrl;
+          if (newsContent) {
+            // Create a title from the first part of the content
+            let title = symbol.toUpperCase();
+            
+            // Check if content mentions specific topics for subtitle
+            if (newsContent.toLowerCase().includes('q1') || newsContent.toLowerCase().includes('q2') || 
+                newsContent.toLowerCase().includes('q3') || newsContent.toLowerCase().includes('q4')) {
+              const quarterMatch = newsContent.match(/Q[1-4]/i);
+              if (quarterMatch) {
+                title = `${symbol.toUpperCase()} - ${quarterMatch[0].toUpperCase()}`;
+              }
+            } else if (newsContent.toLowerCase().includes('dividend')) {
+              title = `${symbol.toUpperCase()} - Dividend`;
+            } else if (newsContent.toLowerCase().includes('agm')) {
+              title = `${symbol.toUpperCase()} - AGM`;
+            } else if (newsContent.toLowerCase().includes('bonus')) {
+              title = `${symbol.toUpperCase()} - Bonus`;
+            } else if (newsContent.toLowerCase().includes('right')) {
+              title = `${symbol.toUpperCase()} - Right Share`;
+            } else if (newsContent.toLowerCase().includes('continuation') || newsContent.toLowerCase().includes('cont.')) {
+              title = `${symbol.toUpperCase()} (Continuation)`;
+            }
             
             newsList.push({
               title: title,
-              source: "DSE News",
-              url: url,
-              publishedAt: dateMatch ? dateMatch[1] : new Date().toLocaleDateString(),
-              summary: newsContent.length > 200 ? decodeHtmlEntities(newsContent.substring(0, 300)) + "..." : undefined,
+              source: "DSE News Archive",
+              url: newsArchiveUrl,
+              publishedAt: date || new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }),
+              summary: newsContent,
             });
           }
         }
-      }
-    }
-    
-    // Also try to find news in div-based structures
-    const newsItems = html.match(/<div[^>]*class[^>]*news[^>]*>[\s\S]*?<\/div>/gi) || [];
-    for (const item of newsItems) {
-      const symbolRegex = new RegExp(`\\b${symbol}\\b`, 'i');
-      if (!symbolRegex.test(item)) continue;
-      
-      const linkMatch = item.match(/<a[^>]*href=["']([^"']+)["'][^>]*>([^<]+)<\/a>/i);
-      const dateMatch = item.match(/(\d{1,2}[-\/]\w{3}[-\/]\d{2,4}|\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i);
-      
-      if (linkMatch) {
-        const url = linkMatch[1].startsWith('http') ? linkMatch[1] : `https://www.dsebd.org/${linkMatch[1]}`;
-        newsList.push({
-          title: decodeHtmlEntities(linkMatch[2]),
-          source: "DSE News",
-          url: url,
-          publishedAt: dateMatch ? dateMatch[1] : new Date().toLocaleDateString(),
-        });
       }
     }
     
@@ -140,41 +192,57 @@ async function fetchStockNews(symbol: string): Promise<StockNews[]> {
     const companyUrl = `https://www.dsebd.org/displayCompany.php?name=${encodeURIComponent(symbol)}`;
     const companyHtml = await fetchHtml(companyUrl);
     
-    // Look for corporate declarations/announcements section
-    const announcementSection = companyHtml.match(/(?:Corporate|Declaration|Announcement|AGM|Dividend|Bonus)[\s\S]*?<table[\s\S]*?<\/table>/gi);
+    // Look for news/announcement sections
+    const sections = companyHtml.match(/(?:News|Declaration|Announcement|Price\s*Sensitive)[\s\S]*?<table[\s\S]*?<\/table>/gi) || [];
     
-    if (announcementSection) {
-      for (const section of announcementSection.slice(0, 2)) {
-        const rows = section.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
+    for (const section of sections.slice(0, 2)) {
+      const rows = section.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
+      
+      for (const row of rows.slice(0, 10)) {
+        // Skip header rows
+        if (/<th/i.test(row)) continue;
         
-        for (const row of rows.slice(0, 5)) {
-          const dateMatch = row.match(/(\d{1,2}[-\/]\w{3}[-\/]\d{2,4}|\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i);
-          const linkMatch = row.match(/<a[^>]*href=["']([^"']+)["'][^>]*>([^<]+)<\/a>/i);
-          const cells = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi) || [];
+        const cells = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi) || [];
+        
+        let date = "";
+        let content = "";
+        
+        for (const cell of cells) {
+          const cellText = decodeHtmlEntities(cell);
           
-          let content = "";
-          for (const cell of cells) {
-            const cellText = cell.replace(/<[^>]+>/g, '').trim();
-            if (cellText.length > 15) {
-              content = cellText;
-              break;
-            }
+          const dateMatch = cellText.match(/(\d{1,2}[-\/]\w{3}[-\/]\d{2,4}|\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i);
+          if (dateMatch && !date) {
+            date = formatDate(dateMatch[1]);
+            continue;
           }
           
-          if (content || linkMatch) {
-            const title = linkMatch ? decodeHtmlEntities(linkMatch[2]) : decodeHtmlEntities(content.substring(0, 150));
-            const url = linkMatch ? (linkMatch[1].startsWith('http') ? linkMatch[1] : `https://www.dsebd.org/${linkMatch[1]}`) : companyUrl;
-            
-            // Avoid duplicates
-            if (!newsList.some(n => n.title === title)) {
-              newsList.push({
-                title: `${symbol}: ${title}`,
-                source: "DSE Corporate",
-                url: url,
-                publishedAt: dateMatch ? dateMatch[1] : new Date().toLocaleDateString(),
-              });
-            }
+          if (cellText.length > 20 && !dateMatch) {
+            content = cellText;
           }
+        }
+        
+        if (content && !newsList.some(n => n.summary === content)) {
+          let title = symbol.toUpperCase();
+          
+          if (content.toLowerCase().includes('q1') || content.toLowerCase().includes('q2') || 
+              content.toLowerCase().includes('q3') || content.toLowerCase().includes('q4')) {
+            const quarterMatch = content.match(/Q[1-4]/i);
+            if (quarterMatch) {
+              title = `${symbol.toUpperCase()} - ${quarterMatch[0].toUpperCase()}`;
+            }
+          } else if (content.toLowerCase().includes('dividend')) {
+            title = `${symbol.toUpperCase()} - Dividend`;
+          } else if (content.toLowerCase().includes('agm')) {
+            title = `${symbol.toUpperCase()} - AGM`;
+          }
+          
+          newsList.push({
+            title: title,
+            source: "DSE Corporate",
+            url: companyUrl,
+            publishedAt: date || new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }),
+            summary: content,
+          });
         }
       }
     }
@@ -182,21 +250,23 @@ async function fetchStockNews(symbol: string): Promise<StockNews[]> {
     console.error(`Error fetching company news for ${symbol}:`, error);
   }
 
-  // If no news found, add a placeholder with correct link
+  // If no news found, add a message
   if (newsList.length === 0) {
     newsList.push({
-      title: `No recent news available for ${symbol}`,
+      title: symbol.toUpperCase(),
       source: "System",
       url: newsArchiveUrl,
-      publishedAt: new Date().toLocaleDateString(),
-      summary: "Check DSE News Archive for the latest announcements.",
+      publishedAt: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }),
+      summary: `No recent news available for ${symbol}. Please check DSE website for the latest announcements.`,
     });
   }
 
-  // Remove duplicates based on title
-  const uniqueNews = newsList.filter((news, index, self) => 
-    index === self.findIndex(n => n.title === news.title)
-  ).slice(0, 15); // Limit to 15 news items
+  // Remove duplicates based on summary content and sort by date
+  const uniqueNews = newsList
+    .filter((news, index, self) => 
+      index === self.findIndex(n => n.summary === news.summary)
+    )
+    .slice(0, 20); // Limit to 20 news items
 
   console.log(`Found ${uniqueNews.length} news items for ${symbol}`);
 

@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, Minus, BarChart3, Activity, DollarSign, ArrowUpDown, Building2, Tag, Loader2, Star, Newspaper, ExternalLink, Clock } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, BarChart3, Activity, DollarSign, ArrowUpDown, Building2, Tag, Loader2, Star, Newspaper, Calendar } from "lucide-react";
 import { Stock } from "@/types/market";
 import { cn } from "@/lib/utils";
 import {
@@ -68,37 +68,28 @@ function FundamentalCard({
   );
 }
 
-function NewsCard({ news }: { news: StockNews }) {
+function NewsCard({ news, symbol }: { news: StockNews; symbol: string }) {
   return (
-    <a
-      href={news.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="block rounded-lg border border-border bg-background p-3 hover:bg-muted/50 transition-colors group"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <h4 className="text-xs sm:text-sm font-medium text-foreground line-clamp-2 group-hover:text-primary transition-colors">
-            {news.title}
-          </h4>
-          {news.summary && (
-            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 line-clamp-2">
-              {news.summary}
-            </p>
-          )}
-          <div className="flex items-center gap-2 mt-2">
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-              {news.source}
-            </Badge>
-            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <Clock className="h-2.5 w-2.5" />
-              {news.publishedAt}
-            </span>
-          </div>
-        </div>
-        <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0 mt-0.5" />
+    <div className="rounded-lg border-b border-border bg-background py-3 last:border-b-0">
+      {/* Symbol Title - Green colored like reference */}
+      <h4 className="text-sm sm:text-base font-semibold text-primary mb-2">
+        {news.title.startsWith(symbol) ? news.title : `${symbol}`}
+        {news.title.includes(" - ") && (
+          <span className="text-primary"> - {news.title.split(" - ").slice(1).join(" - ")}</span>
+        )}
+      </h4>
+      
+      {/* Full news content */}
+      <p className="text-xs sm:text-sm text-foreground leading-relaxed mb-2">
+        {news.summary || news.title}
+      </p>
+      
+      {/* Date at the bottom */}
+      <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-muted-foreground">
+        <Calendar className="h-3 w-3" />
+        {news.publishedAt}
       </div>
-    </a>
+    </div>
   );
 }
 
@@ -417,9 +408,9 @@ export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalPro
                     ))}
                   </div>
                 ) : news && news.length > 0 ? (
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  <div className="divide-y divide-border max-h-[350px] overflow-y-auto pr-1">
                     {news.map((item, index) => (
-                      <NewsCard key={index} news={item} />
+                      <NewsCard key={index} news={item} symbol={stock.symbol} />
                     ))}
                   </div>
                 ) : (
