@@ -55,6 +55,27 @@ interface HistoricalDataPoint {
 
 // Get the base URL for internal function calls
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+const STOCK_API_KEY = Deno.env.get("STOCK_API_KEY") || "";
+
+// Validate API key from request
+function validateApiKey(req: Request): { valid: boolean; error?: string } {
+  // If no API key is configured, allow all requests (for development)
+  if (!STOCK_API_KEY) {
+    return { valid: true };
+  }
+
+  const apiKey = req.headers.get("x-api-key");
+  
+  if (!apiKey) {
+    return { valid: false, error: "API key required. Include 'x-api-key' header." };
+  }
+
+  if (apiKey !== STOCK_API_KEY) {
+    return { valid: false, error: "Invalid API key." };
+  }
+
+  return { valid: true };
+}
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
 
 async function fetchMarketData(symbol: string): Promise<{ data: any; marketOpen: boolean } | null> {
@@ -150,6 +171,21 @@ serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Validate API key
+  const authResult = validateApiKey(req);
+  if (!authResult.valid) {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: authResult.error,
+      }),
+      {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
 
   try {
