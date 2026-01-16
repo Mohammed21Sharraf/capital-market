@@ -96,7 +96,7 @@ async function fetchMarketData(symbol: string): Promise<{ data: any; marketOpen:
 
     const result = await response.json();
     return {
-      data: result.stock || null,
+      data: result.data || null,
       marketOpen: result.marketOpen || false,
     };
   } catch (error) {
