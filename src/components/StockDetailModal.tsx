@@ -16,10 +16,90 @@ import { Separator } from "@/components/ui/separator";
 import { HistoricalChart } from "@/components/watchlist/HistoricalChart";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { StockNews } from "@/types/market";
+
 interface StockDetailModalProps {
   stock: Stock | null;
   isOpen: boolean;
   onClose: () => void;
+}
+
+// Helper components defined before main component to ensure they're available
+function DetailCard({ 
+  label, 
+  value, 
+  valueClass,
+  icon
+}: { 
+  label: string; 
+  value: string; 
+  valueClass?: string;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-background p-2 sm:p-3">
+      <div className="flex items-center gap-1">
+        {icon}
+        <p className="text-[10px] sm:text-xs text-muted-foreground">{label}</p>
+      </div>
+      <p className={cn("font-mono text-xs sm:text-sm font-semibold text-foreground mt-0.5 sm:mt-1", valueClass)}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function FundamentalCard({
+  label,
+  value,
+  valueClass,
+}: {
+  label: string;
+  value: string;
+  valueClass?: string;
+}) {
+  return (
+    <div className="rounded-lg bg-muted/50 p-2 sm:p-3">
+      <p className="text-[10px] sm:text-xs text-muted-foreground">{label}</p>
+      <p className={cn("font-mono text-xs sm:text-sm font-semibold text-foreground mt-0.5 sm:mt-1 truncate", valueClass)}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function NewsCard({ news }: { news: StockNews }) {
+  return (
+    <a
+      href={news.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block rounded-lg border border-border bg-background p-3 hover:bg-muted/50 transition-colors group"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <h4 className="text-xs sm:text-sm font-medium text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+            {news.title}
+          </h4>
+          {news.summary && (
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 line-clamp-2">
+              {news.summary}
+            </p>
+          )}
+          <div className="flex items-center gap-2 mt-2">
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+              {news.source}
+            </Badge>
+            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <Clock className="h-2.5 w-2.5" />
+              {news.publishedAt}
+            </span>
+          </div>
+        </div>
+        <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0 mt-0.5" />
+      </div>
+    </a>
+  );
 }
 
 export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalProps) {
@@ -351,82 +431,5 @@ export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalPro
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function DetailCard({ 
-  label, 
-  value, 
-  valueClass,
-  icon
-}: { 
-  label: string; 
-  value: string; 
-  valueClass?: string;
-  icon?: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-lg border border-border bg-background p-2 sm:p-3">
-      <div className="flex items-center gap-1">
-        {icon}
-        <p className="text-[10px] sm:text-xs text-muted-foreground">{label}</p>
-      </div>
-      <p className={cn("font-mono text-xs sm:text-sm font-semibold text-foreground mt-0.5 sm:mt-1", valueClass)}>
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function FundamentalCard({
-  label,
-  value,
-  valueClass,
-}: {
-  label: string;
-  value: string;
-  valueClass?: string;
-}) {
-  return (
-    <div className="rounded-lg bg-muted/50 p-2 sm:p-3">
-      <p className="text-[10px] sm:text-xs text-muted-foreground">{label}</p>
-      <p className={cn("font-mono text-xs sm:text-sm font-semibold text-foreground mt-0.5 sm:mt-1 truncate", valueClass)}>
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function NewsCard({ news }: { news: { title: string; source: string; url: string; publishedAt: string; summary?: string } }) {
-  return (
-    <a
-      href={news.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="block rounded-lg border border-border bg-background p-3 hover:bg-muted/50 transition-colors group"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <h4 className="text-xs sm:text-sm font-medium text-foreground line-clamp-2 group-hover:text-primary transition-colors">
-            {news.title}
-          </h4>
-          {news.summary && (
-            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 line-clamp-2">
-              {news.summary}
-            </p>
-          )}
-          <div className="flex items-center gap-2 mt-2">
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-              {news.source}
-            </Badge>
-            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <Clock className="h-2.5 w-2.5" />
-              {news.publishedAt}
-            </span>
-          </div>
-        </div>
-        <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0 mt-0.5" />
-      </div>
-    </a>
   );
 }
