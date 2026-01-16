@@ -121,7 +121,15 @@ export function WatchlistStockCard({
             <>
               <div className="bg-muted/50 rounded-lg p-2">
                 <p className="text-xs text-muted-foreground">EPS</p>
-                <p className="font-semibold">
+                <p className={`font-semibold ${
+                  fundamentals.eps !== undefined && fundamentals.eps !== null
+                    ? fundamentals.eps < 0 
+                      ? 'text-price-down' 
+                      : fundamentals.eps > 0 
+                        ? 'text-price-up' 
+                        : ''
+                    : ''
+                }`}>
                   {fundamentals.eps?.toFixed(2) ?? "-"}
                 </p>
               </div>
