@@ -23,6 +23,7 @@ export interface StockFundamentals {
   authorizedCap?: number;
   paidUpCap?: number;
   faceValue?: number;
+  totalShares?: number;
   pe?: number;
   eps?: number;
   nav?: number;
