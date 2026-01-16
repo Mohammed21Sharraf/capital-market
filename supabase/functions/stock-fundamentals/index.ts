@@ -12,6 +12,7 @@ interface StockFundamentals {
   authorizedCap?: number;
   paidUpCap?: number;
   faceValue?: number;
+  totalShares?: number;
   pe?: number;
   eps?: number;
   nav?: number;
@@ -289,6 +290,13 @@ async function fetchStockFundamentals(symbol: string): Promise<StockFundamentals
   const faceValueMatch = html.match(/Face(?:\/Par)?\s*Value[^<]*<\/th>\s*<td[^>]*>\s*([\d,.-]+)/i);
   if (faceValueMatch) {
     fundamentals.faceValue = parseNumber(faceValueMatch[1]);
+  }
+
+  // Calculate Total Shares from Paid-up Capital and Face Value
+  // Paid-up Capital is in Mn (millions), Face Value is per share
+  if (fundamentals.paidUpCap && fundamentals.faceValue && fundamentals.faceValue > 0) {
+    // paidUpCap is in Mn, so multiply by 1,000,000 then divide by face value
+    fundamentals.totalShares = (fundamentals.paidUpCap * 1_000_000) / fundamentals.faceValue;
   }
 
   // Extract Listing Year

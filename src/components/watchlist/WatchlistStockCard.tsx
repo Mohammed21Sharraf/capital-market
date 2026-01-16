@@ -136,7 +136,7 @@ export function WatchlistStockCard({
               <div className="bg-muted/50 rounded-lg p-2">
                 <p className="text-xs text-muted-foreground">P/E</p>
                 <p className="font-semibold">
-                  {fundamentals.pe?.toFixed(1) ?? "-"}
+                  {fundamentals.pe?.toFixed(2) ?? "-"}
                 </p>
               </div>
               <div className="bg-muted/50 rounded-lg p-2">

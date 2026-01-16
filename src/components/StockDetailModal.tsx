@@ -72,6 +72,14 @@ export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalPro
     return cap.toFixed(2) + " M";
   };
 
+  const formatSharesCount = (shares?: number) => {
+    if (!shares) return "—";
+    if (shares >= 1_000_000_000) return (shares / 1_000_000_000).toFixed(2) + "B";
+    if (shares >= 1_000_000) return (shares / 1_000_000).toFixed(2) + "M";
+    if (shares >= 1_000) return (shares / 1_000).toFixed(2) + "K";
+    return shares.toLocaleString();
+  };
+
   const getPerformanceLabel = () => {
     if (stock.changePercent >= 5) return { label: "Strong Gainer", color: "text-price-up bg-success/20" };
     if (stock.changePercent >= 2) return { label: "Gainer", color: "text-price-up bg-success/10" };
@@ -276,11 +284,12 @@ export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalPro
                 ))}
               </div>
             ) : fundamentals ? (
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3">
                 <FundamentalCard label="Market Cap" value={formatMarketCap(fundamentals.marketCap)} />
                 <FundamentalCard label="P/E Ratio" value={fundamentals.pe ? fundamentals.pe.toFixed(2) : "—"} />
                 <FundamentalCard label="EPS" value={fundamentals.eps ? `৳${fundamentals.eps.toFixed(2)}` : "—"} valueClass={fundamentals.eps ? (fundamentals.eps < 0 ? "text-price-down" : fundamentals.eps > 0 ? "text-price-up" : "") : ""} />
                 <FundamentalCard label="NAV" value={fundamentals.nav ? `৳${fundamentals.nav.toFixed(2)}` : "—"} />
+                <FundamentalCard label="Shares" value={fundamentals.totalShares ? formatSharesCount(fundamentals.totalShares) : "—"} />
                 <FundamentalCard label="52W High" value={fundamentals.yearHigh ? `৳${formatNumber(fundamentals.yearHigh)}` : "—"} valueClass="text-price-up" />
                 <FundamentalCard label="52W Low" value={fundamentals.yearLow ? `৳${formatNumber(fundamentals.yearLow)}` : "—"} valueClass="text-price-down" />
               </div>

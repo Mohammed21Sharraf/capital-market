@@ -52,6 +52,14 @@ export function WatchlistDetailModal({
     return `${value.toFixed(0)}M`;
   };
 
+  const formatSharesCount = (shares?: number) => {
+    if (!shares) return "-";
+    if (shares >= 1_000_000_000) return (shares / 1_000_000_000).toFixed(2) + "B";
+    if (shares >= 1_000_000) return (shares / 1_000_000).toFixed(2) + "M";
+    if (shares >= 1_000) return (shares / 1_000).toFixed(2) + "K";
+    return shares.toLocaleString();
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -164,7 +172,7 @@ export function WatchlistDetailModal({
                 <div className="bg-muted/50 rounded-lg p-3">
                   <p className="text-xs text-muted-foreground">P/E Ratio</p>
                   <p className="text-lg font-semibold">
-                    {fundamentals.pe?.toFixed(1) ?? "-"}
+                    {fundamentals.pe?.toFixed(2) ?? "-"}
                   </p>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-3">
@@ -177,6 +185,12 @@ export function WatchlistDetailModal({
                   <p className="text-xs text-muted-foreground">NAV</p>
                   <p className="text-lg font-semibold">
                     {fundamentals.nav?.toFixed(2) ?? "-"}
+                  </p>
+                </div>
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground">Shares</p>
+                  <p className="text-lg font-semibold">
+                    {formatSharesCount(fundamentals.totalShares)}
                   </p>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-3">
@@ -195,12 +209,6 @@ export function WatchlistDetailModal({
                   <p className="text-xs text-muted-foreground">Sector</p>
                   <p className="text-sm font-semibold truncate">
                     {fundamentals.sector ?? "-"}
-                  </p>
-                </div>
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-xs text-muted-foreground">Category</p>
-                  <p className="text-lg font-semibold">
-                    {fundamentals.category ?? "-"}
                   </p>
                 </div>
               </div>
