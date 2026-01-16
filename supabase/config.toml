@@ -1,1 +1,16 @@
 project_id = "osglgpafsqthqolqbnwu"
+
+[functions.market-data]
+verify_jwt = false
+
+[functions.stock-data]
+verify_jwt = false
+
+[functions.stock-fundamentals]
+verify_jwt = false
+
+[functions.stock-history]
+verify_jwt = false
+
+[functions.stock-news]
+verify_jwt = false
