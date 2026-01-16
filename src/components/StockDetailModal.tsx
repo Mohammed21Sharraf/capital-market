@@ -279,7 +279,7 @@ export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalPro
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
                 <FundamentalCard label="Market Cap" value={formatMarketCap(fundamentals.marketCap)} />
                 <FundamentalCard label="P/E Ratio" value={fundamentals.pe ? fundamentals.pe.toFixed(2) : "—"} />
-                <FundamentalCard label="EPS" value={fundamentals.eps ? `৳${fundamentals.eps.toFixed(2)}` : "—"} />
+                <FundamentalCard label="EPS" value={fundamentals.eps ? `৳${fundamentals.eps.toFixed(2)}` : "—"} valueClass={fundamentals.eps ? (fundamentals.eps < 0 ? "text-price-down" : fundamentals.eps > 0 ? "text-price-up" : "") : ""} />
                 <FundamentalCard label="NAV" value={fundamentals.nav ? `৳${fundamentals.nav.toFixed(2)}` : "—"} />
                 <FundamentalCard label="52W High" value={fundamentals.yearHigh ? `৳${formatNumber(fundamentals.yearHigh)}` : "—"} valueClass="text-price-up" />
                 <FundamentalCard label="52W Low" value={fundamentals.yearLow ? `৳${formatNumber(fundamentals.yearLow)}` : "—"} valueClass="text-price-down" />

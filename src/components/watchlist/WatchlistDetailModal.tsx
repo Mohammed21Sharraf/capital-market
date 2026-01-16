@@ -149,7 +149,15 @@ export function WatchlistDetailModal({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="bg-muted/50 rounded-lg p-3">
                   <p className="text-xs text-muted-foreground">EPS</p>
-                  <p className="text-lg font-semibold">
+                  <p className={`text-lg font-semibold ${
+                    fundamentals.eps !== undefined && fundamentals.eps !== null
+                      ? fundamentals.eps < 0 
+                        ? 'text-price-down' 
+                        : fundamentals.eps > 0 
+                          ? 'text-price-up' 
+                          : ''
+                      : ''
+                  }`}>
                     {fundamentals.eps?.toFixed(2) ?? "-"}
                   </p>
                 </div>

@@ -179,17 +179,23 @@ export function StockSearch({ stocks, onStockSelect }: StockSearchProps) {
     return (
       <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
         {fund.eps !== undefined && (
-          <span className="bg-muted/50 px-1.5 py-0.5 rounded">
+          <span className={`px-1.5 py-0.5 rounded font-medium ${
+            fund.eps < 0 
+              ? 'bg-red-500/30 text-red-300 group-data-[selected=true]:bg-red-600/40 group-data-[selected=true]:text-red-900' 
+              : fund.eps > 0 
+                ? 'bg-green-500/30 text-green-300 group-data-[selected=true]:bg-green-600/40 group-data-[selected=true]:text-green-900' 
+                : 'bg-muted/50 text-muted-foreground group-data-[selected=true]:text-foreground/80'
+          }`}>
             EPS: {fund.eps.toFixed(2)}
           </span>
         )}
         {fund.pe !== undefined && fund.pe > 0 && (
-          <span className="bg-muted/50 px-1.5 py-0.5 rounded">
+          <span className="bg-muted/50 px-1.5 py-0.5 rounded group-data-[selected=true]:bg-black/20 group-data-[selected=true]:text-foreground/80">
             P/E: {fund.pe.toFixed(1)}
           </span>
         )}
         {fund.marketCap !== undefined && (
-          <span className="bg-muted/50 px-1.5 py-0.5 rounded">
+          <span className="bg-muted/50 px-1.5 py-0.5 rounded group-data-[selected=true]:bg-black/20 group-data-[selected=true]:text-foreground/80">
             MCap: {formatMarketCap(fund.marketCap)}
           </span>
         )}
@@ -244,7 +250,7 @@ export function StockSearch({ stocks, onStockSelect }: StockSearchProps) {
                   key={`watchlist-${stock.symbol}`}
                   value={`${stock.symbol} ${stock.name} ${stock.sector} watchlist`}
                   onSelect={() => handleSelect(stock)}
-                  className="flex flex-col items-start gap-1 py-2"
+                  className="group flex flex-col items-start gap-1 py-2"
                 >
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-2">
@@ -282,7 +288,7 @@ export function StockSearch({ stocks, onStockSelect }: StockSearchProps) {
                     key={`gainer-${stock.symbol}`}
                     value={`${stock.symbol} ${stock.name} ${stock.sector} gainer`}
                     onSelect={() => handleSelect(stock)}
-                    className="flex flex-col items-start gap-1 py-2"
+                    className="group flex flex-col items-start gap-1 py-2"
                   >
                     <div className="flex items-center justify-between w-full">
                       <div className="flex items-center gap-2">
@@ -317,7 +323,7 @@ export function StockSearch({ stocks, onStockSelect }: StockSearchProps) {
                     key={`loser-${stock.symbol}`}
                     value={`${stock.symbol} ${stock.name} ${stock.sector} loser`}
                     onSelect={() => handleSelect(stock)}
-                    className="flex flex-col items-start gap-1 py-2"
+                    className="group flex flex-col items-start gap-1 py-2"
                   >
                     <div className="flex items-center justify-between w-full">
                       <div className="flex items-center gap-2">
@@ -357,7 +363,7 @@ export function StockSearch({ stocks, onStockSelect }: StockSearchProps) {
                       key={stock.symbol}
                       value={`${stock.symbol} ${stock.name} ${stock.sector} ${stock.category}`}
                       onSelect={() => handleSelect(stock)}
-                      className="flex flex-col items-start gap-1 py-2"
+                      className="group flex flex-col items-start gap-1 py-2"
                     >
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center gap-2">
