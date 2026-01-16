@@ -58,114 +58,145 @@ async function fetchStockNews(symbol: string): Promise<StockNews[]> {
   console.log(`Fetching news for: ${symbol}`);
   
   const newsList: StockNews[] = [];
+  const newsArchiveUrl = "https://www.dsebd.org/news_archive.php";
   
   try {
-    // Fetch from DSE company page for news/announcements
-    const dseUrl = `https://www.dsebd.org/displayCompany.php?name=${encodeURIComponent(symbol)}`;
-    const html = await fetchHtml(dseUrl);
+    // Fetch from DSE news archive page
+    const html = await fetchHtml(newsArchiveUrl);
     
-    // Extract announcements/news from DSE page
-    // Look for news sections - typically corporate announcements, AGM notices, etc.
-    const newsPatterns = [
-      // Pattern for announcement sections
-      /<tr[^>]*>[\s\S]*?<td[^>]*>(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})<\/td>\s*<td[^>]*>([\s\S]*?)<\/td>[\s\S]*?<\/tr>/gi,
-      // Pattern for news items with links
-      /<a[^>]*href=["']([^"']*(?:announcement|news)[^"']*)["'][^>]*>([^<]+)<\/a>/gi,
-    ];
+    // Parse news items from the archive - look for rows containing the symbol
+    // The news archive has a table structure with date, company, and news content
+    const tableMatch = html.match(/<table[^>]*class[^>]*>[\s\S]*?<\/table>/gi);
     
-    // Extract from corporate announcements table
-    const announcementSection = html.match(/Corporate\s*(?:Declarations|Announcements?)[\s\S]*?<table[\s\S]*?<\/table>/i);
-    if (announcementSection) {
-      const rows = announcementSection[0].match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
-      
-      for (const row of rows.slice(0, 10)) { // Limit to 10 news items
-        const dateMatch = row.match(/<td[^>]*>(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})<\/td>/i);
-        const contentMatch = row.match(/<td[^>]*>([^<]+(?:<[^>]+>[^<]*)*)<\/td>/gi);
+    if (tableMatch) {
+      for (const table of tableMatch) {
+        const rows = table.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
         
-        if (dateMatch && contentMatch && contentMatch.length >= 2) {
-          const dateStr = dateMatch[1];
-          const content = contentMatch[1].replace(/<[^>]+>/g, '').trim();
+        for (const row of rows) {
+          // Check if this row contains news for the requested symbol
+          const symbolRegex = new RegExp(`\\b${symbol}\\b`, 'i');
+          if (!symbolRegex.test(row)) continue;
           
-          if (content && content.length > 10) {
+          // Extract date - usually in first column
+          const dateMatch = row.match(/(\d{1,2}[-\/]\w{3}[-\/]\d{2,4}|\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i);
+          
+          // Extract news link and title
+          const linkMatch = row.match(/<a[^>]*href=["']([^"']+)["'][^>]*>([^<]+)<\/a>/i);
+          
+          // Extract text content from cells
+          const cells = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi) || [];
+          let newsContent = "";
+          
+          for (const cell of cells) {
+            const cellText = cell.replace(/<[^>]+>/g, '').trim();
+            if (cellText.length > 20 && !cellText.match(/^\d{1,2}[-\/]/)) {
+              newsContent = cellText;
+              break;
+            }
+          }
+          
+          if (newsContent || linkMatch) {
+            const title = linkMatch ? decodeHtmlEntities(linkMatch[2]) : decodeHtmlEntities(newsContent.substring(0, 200));
+            const url = linkMatch ? (linkMatch[1].startsWith('http') ? linkMatch[1] : `https://www.dsebd.org/${linkMatch[1]}`) : newsArchiveUrl;
+            
             newsList.push({
-              title: decodeHtmlEntities(content.substring(0, 200)),
-              source: "DSE",
-              url: dseUrl,
-              publishedAt: dateStr,
-              summary: content.length > 200 ? decodeHtmlEntities(content.substring(0, 300)) + "..." : undefined,
+              title: title,
+              source: "DSE News",
+              url: url,
+              publishedAt: dateMatch ? dateMatch[1] : new Date().toLocaleDateString(),
+              summary: newsContent.length > 200 ? decodeHtmlEntities(newsContent.substring(0, 300)) + "..." : undefined,
             });
           }
         }
       }
     }
     
-    // Extract from Right Issue/Bonus/Dividend section
-    const dividendSection = html.match(/(?:Right\s*Issue|Bonus|Dividend|AGM|EGM)[\s\S]*?<table[\s\S]*?<\/table>/gi);
-    if (dividendSection) {
-      for (const section of dividendSection.slice(0, 3)) {
-        const titleMatch = section.match(/(Right\s*Issue|Bonus|Cash\s*Dividend|Stock\s*Dividend|AGM|EGM)[^<]*/i);
-        const dateMatch = section.match(/(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/);
-        
-        if (titleMatch) {
-          const title = decodeHtmlEntities(titleMatch[0].trim());
-          newsList.push({
-            title: `${symbol}: ${title}`,
-            source: "DSE Corporate",
-            url: dseUrl,
-            publishedAt: dateMatch ? dateMatch[1] : new Date().toLocaleDateString(),
-          });
-        }
-      }
-    }
-    
-    // Search for price sensitive information
-    const psiMatch = html.match(/Price\s*Sensitive\s*Information[\s\S]*?<table[\s\S]*?<\/table>/i);
-    if (psiMatch) {
-      const psiRows = psiMatch[0].match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
+    // Also try to find news in div-based structures
+    const newsItems = html.match(/<div[^>]*class[^>]*news[^>]*>[\s\S]*?<\/div>/gi) || [];
+    for (const item of newsItems) {
+      const symbolRegex = new RegExp(`\\b${symbol}\\b`, 'i');
+      if (!symbolRegex.test(item)) continue;
       
-      for (const row of psiRows.slice(0, 5)) {
-        const dateMatch = row.match(/(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/);
-        const contentMatch = row.match(/<td[^>]*>([^<]{20,})<\/td>/i);
-        
-        if (contentMatch) {
-          newsList.push({
-            title: decodeHtmlEntities(contentMatch[1].substring(0, 150)),
-            source: "DSE PSI",
-            url: dseUrl,
-            publishedAt: dateMatch ? dateMatch[1] : new Date().toLocaleDateString(),
-          });
-        }
+      const linkMatch = item.match(/<a[^>]*href=["']([^"']+)["'][^>]*>([^<]+)<\/a>/i);
+      const dateMatch = item.match(/(\d{1,2}[-\/]\w{3}[-\/]\d{2,4}|\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i);
+      
+      if (linkMatch) {
+        const url = linkMatch[1].startsWith('http') ? linkMatch[1] : `https://www.dsebd.org/${linkMatch[1]}`;
+        newsList.push({
+          title: decodeHtmlEntities(linkMatch[2]),
+          source: "DSE News",
+          url: url,
+          publishedAt: dateMatch ? dateMatch[1] : new Date().toLocaleDateString(),
+        });
       }
     }
     
   } catch (error) {
-    console.error(`Error fetching news from DSE for ${symbol}:`, error);
+    console.error(`Error fetching news from DSE archive for ${symbol}:`, error);
   }
   
-  // Try to fetch from a financial news source
+  // Also fetch from company-specific page for corporate announcements
   try {
-    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(symbol + " DSE Bangladesh stock news")}&tbm=nws&num=5`;
-    // Note: This is a placeholder - in production you'd use a proper news API
-    console.log(`Would search: ${searchUrl}`);
+    const companyUrl = `https://www.dsebd.org/displayCompany.php?name=${encodeURIComponent(symbol)}`;
+    const companyHtml = await fetchHtml(companyUrl);
+    
+    // Look for corporate declarations/announcements section
+    const announcementSection = companyHtml.match(/(?:Corporate|Declaration|Announcement|AGM|Dividend|Bonus)[\s\S]*?<table[\s\S]*?<\/table>/gi);
+    
+    if (announcementSection) {
+      for (const section of announcementSection.slice(0, 2)) {
+        const rows = section.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
+        
+        for (const row of rows.slice(0, 5)) {
+          const dateMatch = row.match(/(\d{1,2}[-\/]\w{3}[-\/]\d{2,4}|\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i);
+          const linkMatch = row.match(/<a[^>]*href=["']([^"']+)["'][^>]*>([^<]+)<\/a>/i);
+          const cells = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi) || [];
+          
+          let content = "";
+          for (const cell of cells) {
+            const cellText = cell.replace(/<[^>]+>/g, '').trim();
+            if (cellText.length > 15) {
+              content = cellText;
+              break;
+            }
+          }
+          
+          if (content || linkMatch) {
+            const title = linkMatch ? decodeHtmlEntities(linkMatch[2]) : decodeHtmlEntities(content.substring(0, 150));
+            const url = linkMatch ? (linkMatch[1].startsWith('http') ? linkMatch[1] : `https://www.dsebd.org/${linkMatch[1]}`) : companyUrl;
+            
+            // Avoid duplicates
+            if (!newsList.some(n => n.title === title)) {
+              newsList.push({
+                title: `${symbol}: ${title}`,
+                source: "DSE Corporate",
+                url: url,
+                publishedAt: dateMatch ? dateMatch[1] : new Date().toLocaleDateString(),
+              });
+            }
+          }
+        }
+      }
+    }
   } catch (error) {
-    console.error(`Error fetching external news for ${symbol}:`, error);
+    console.error(`Error fetching company news for ${symbol}:`, error);
   }
 
-  // If no news found, add a placeholder
+  // If no news found, add a placeholder with correct link
   if (newsList.length === 0) {
     newsList.push({
       title: `No recent news available for ${symbol}`,
       source: "System",
-      url: `https://www.dsebd.org/displayCompany.php?name=${encodeURIComponent(symbol)}`,
+      url: newsArchiveUrl,
       publishedAt: new Date().toLocaleDateString(),
-      summary: "Check DSE website for the latest announcements and corporate declarations.",
+      summary: "Check DSE News Archive for the latest announcements.",
     });
   }
 
   // Remove duplicates based on title
   const uniqueNews = newsList.filter((news, index, self) => 
     index === self.findIndex(n => n.title === news.title)
-  );
+  ).slice(0, 15); // Limit to 15 news items
 
   console.log(`Found ${uniqueNews.length} news items for ${symbol}`);
 
