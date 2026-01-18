@@ -2,21 +2,25 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { PortfolioItem } from "@/hooks/usePortfolio";
+import { PriceAlert } from "@/hooks/usePriceAlerts";
 import { Stock } from "@/types/market";
-import { Trash2, Edit2, Check, X, TrendingUp, TrendingDown, Eye } from "lucide-react";
+import { Trash2, Edit2, Check, X, TrendingUp, TrendingDown, Eye, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface PortfolioCardProps {
   item: PortfolioItem;
   stock?: Stock;
+  alerts?: PriceAlert[];
   onUpdate: (id: string, updates: Partial<Omit<PortfolioItem, "id">>) => void;
   onRemove: (id: string) => void;
   onViewDetails?: (stock: Stock) => void;
+  onAddAlert?: (stock: Stock) => void;
 }
 
-export function PortfolioCard({ item, stock, onUpdate, onRemove, onViewDetails }: PortfolioCardProps) {
+export function PortfolioCard({ item, stock, alerts = [], onUpdate, onRemove, onViewDetails, onAddAlert }: PortfolioCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editQuantity, setEditQuantity] = useState(item.quantity.toString());
   const [editCostPrice, setEditCostPrice] = useState(item.costPrice.toString());
@@ -27,6 +31,8 @@ export function PortfolioCard({ item, stock, onUpdate, onRemove, onViewDetails }
   const gainLoss = currentValue - totalCost;
   const gainLossPercent = totalCost > 0 ? (gainLoss / totalCost) * 100 : 0;
   const isProfit = gainLoss >= 0;
+  const activeAlerts = alerts.filter((a) => !a.triggered);
+  const triggeredAlerts = alerts.filter((a) => a.triggered);
 
   const handleSave = () => {
     const qty = parseFloat(editQuantity);
@@ -70,6 +76,21 @@ export function PortfolioCard({ item, stock, onUpdate, onRemove, onViewDetails }
           {item.notes && (
             <p className="text-xs text-muted-foreground mt-1 italic truncate">{item.notes}</p>
           )}
+          {/* Alert Badges */}
+          {(activeAlerts.length > 0 || triggeredAlerts.length > 0) && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {activeAlerts.map((alert) => (
+                <Badge key={alert.id} variant="outline" className="text-[10px] px-1.5 py-0">
+                  {alert.type === "above" ? "↑" : "↓"} ৳{alert.targetPrice.toFixed(2)}
+                </Badge>
+              ))}
+              {triggeredAlerts.map((alert) => (
+                <Badge key={alert.id} variant="secondary" className="text-[10px] px-1.5 py-0 bg-amber-500/20 text-amber-600">
+                  🔔 {alert.type === "above" ? "↑" : "↓"} ৳{alert.targetPrice.toFixed(2)}
+                </Badge>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Actions */}
@@ -85,6 +106,17 @@ export function PortfolioCard({ item, stock, onUpdate, onRemove, onViewDetails }
             </>
           ) : (
             <>
+              {stock && onAddAlert && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => onAddAlert(stock)}
+                  title="Set price alert"
+                >
+                  <Bell className={cn("h-4 w-4", activeAlerts.length > 0 && "text-primary")} />
+                </Button>
+              )}
               {stock && onViewDetails && (
                 <Button 
                   variant="ghost" 
