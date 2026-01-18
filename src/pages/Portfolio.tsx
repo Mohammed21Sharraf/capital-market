@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Briefcase, Trash2 } from "lucide-react";
+import { ArrowLeft, Briefcase, Trash2, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { useMarketData } from "@/hooks/useMarketData";
+import { usePriceAlerts } from "@/hooks/usePriceAlerts";
 import { PortfolioCard } from "@/components/portfolio/PortfolioCard";
 import { PortfolioSummary } from "@/components/portfolio/PortfolioSummary";
 import { AddPortfolioDialog } from "@/components/portfolio/AddPortfolioDialog";
 import { StockDetailModal } from "@/components/StockDetailModal";
+import { PriceAlertDialog } from "@/components/watchlist/PriceAlertDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Stock } from "@/types/market";
 import {
@@ -26,11 +28,41 @@ import { toast } from "sonner";
 const Portfolio = () => {
   const { portfolio, isLoaded, addItem, updateItem, removeItem, clearPortfolio } = usePortfolio();
   const { stocks, isLoading: isLoadingStocks } = useMarketData();
+  const { alerts, addAlert, removeAlert, checkAlerts } = usePriceAlerts();
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [alertDialogStock, setAlertDialogStock] = useState<Stock | null>(null);
 
   const isInitialStocksLoading = isLoadingStocks && stocks.length === 0;
   const stockMap = new Map(stocks.map((s) => [s.symbol, s]));
+
+  // Get portfolio stocks with current market data
+  const portfolioStocks = useMemo(() => {
+    return portfolio
+      .map((item) => stockMap.get(item.symbol))
+      .filter((s): s is Stock => !!s);
+  }, [portfolio, stockMap]);
+
+  // Check for triggered alerts when prices update
+  useEffect(() => {
+    portfolioStocks.forEach((stock) => {
+      const triggered = checkAlerts(stock.symbol, stock.ltp);
+      triggered.forEach((alert) => {
+        toast.warning(
+          `🔔 ${stock.symbol} is now ${alert.type === "above" ? "above" : "below"} ৳${alert.targetPrice.toFixed(2)}!`,
+          { duration: 5000 }
+        );
+      });
+    });
+  }, [portfolioStocks, checkAlerts]);
+
+  // Count alerts for portfolio stocks
+  const portfolioAlerts = useMemo(() => {
+    const symbols = new Set(portfolio.map((p) => p.symbol));
+    return alerts.filter((a) => symbols.has(a.symbol));
+  }, [alerts, portfolio]);
+
+  const triggeredCount = portfolioAlerts.filter((a) => a.triggered).length;
 
   const handleClearAll = () => {
     clearPortfolio();
@@ -45,6 +77,11 @@ const Portfolio = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedStock(null);
+  };
+
+  const handleAddAlert = (symbol: string, type: "above" | "below", targetPrice: number) => {
+    addAlert(symbol, type, targetPrice);
+    toast.success(`Alert set: ${symbol} ${type} ৳${targetPrice.toFixed(2)}`);
   };
 
   return (
@@ -141,9 +178,11 @@ const Portfolio = () => {
                     key={item.id}
                     item={item}
                     stock={stockMap.get(item.symbol)}
+                    alerts={alerts.filter((a) => a.symbol === item.symbol)}
                     onUpdate={updateItem}
                     onRemove={removeItem}
                     onViewDetails={handleViewDetails}
+                    onAddAlert={(stock) => setAlertDialogStock(stock)}
                   />
                 ))}
               </div>
@@ -165,6 +204,16 @@ const Portfolio = () => {
         stock={selectedStock}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
+      />
+
+      {/* Price Alert Dialog */}
+      <PriceAlertDialog
+        stock={alertDialogStock}
+        isOpen={!!alertDialogStock}
+        onClose={() => setAlertDialogStock(null)}
+        alerts={alerts}
+        onAddAlert={handleAddAlert}
+        onRemoveAlert={removeAlert}
       />
     </div>
   );
