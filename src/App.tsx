@@ -8,6 +8,7 @@ import BirdsEye from "./pages/BirdsEye";
 import Watchlist from "./pages/Watchlist";
 import Portfolio from "./pages/Portfolio";
 import HistoricalData from "./pages/HistoricalData";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/watchlist" element={<Watchlist />} />
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/historical" element={<HistoricalData />} />
+          <Route path="/admin" element={<Admin />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

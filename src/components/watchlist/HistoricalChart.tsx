@@ -105,9 +105,9 @@ export function HistoricalChart({ stock }: HistoricalChartProps) {
                 Simulated Data
               </Badge>
             )}
-            {source === "dse" && !isLoading && (
+            {(source === "dse" || source === "database") && !isLoading && (
               <Badge variant="outline" className="text-xs text-success border-success/30">
-                Live DSE Data
+                {source === "database" ? "Database" : "Live DSE"}
               </Badge>
             )}
           </div>
