@@ -116,31 +116,58 @@ async function fetchWithRetry(
   throw lastError || new Error("Fetch failed after retries");
 }
 
-// Parse historical data from DSE close_price_archive.php
+// Parse historical data from DSE displayCompany.php page
 function parseHistoricalData(html: string, symbol: string): HistoricalDataPoint[] {
   const data: HistoricalDataPoint[] = [];
   
-  // Find table rows
-  const trBlocks = html.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
-  console.log(`Found ${trBlocks.length} table rows in historical HTML`);
+  // DSE displayCompany.php has a "Day End Summary" section with historical data
+  // The historical price data table has a header row like:
+  // # | DATE | TRADE | VALUE(mn) | VOLUME | HIGH | LOW | CLOSEP | YCP
   
-  for (const tr of trBlocks) {
+  // Find all table rows across the entire page
+  const allRows = html.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
+  console.log(`Found ${allRows.length} total rows in page HTML`);
+  
+  let debugSampleLogged = false;
+  
+  for (const tr of allRows) {
     // Skip header rows
-    if (tr.includes("<th") || tr.toLowerCase().includes("date") && tr.toLowerCase().includes("close")) continue;
+    if (/<th[\s>]/i.test(tr)) continue;
     
     const tdMatches = Array.from(tr.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi));
-    const tdTexts = tdMatches.map((x) => decodeHtmlEntities(x[1].replace(/<[^>]+>/g, "").trim()));
+    const tdTexts = tdMatches.map((x: RegExpMatchArray) => decodeHtmlEntities(x[1].replace(/<[^>]+>/g, "").trim()));
     
-    if (tdTexts.length < 2) continue;
+    // Need enough columns for historical data
+    if (tdTexts.length < 7) continue;
     
-    // Try to parse date from first column
-    const dateStr = tdTexts[0];
-    if (!dateStr || dateStr.includes("#") || dateStr.toLowerCase().includes("sl")) continue;
+    // Look for a date pattern in any of the first 3 columns
+    let dateIdx = -1;
+    let dateStr = "";
     
-    // Parse date (formats: DD-MMM-YYYY, DD/MM/YYYY, YYYY-MM-DD)
+    for (let i = 0; i < Math.min(3, tdTexts.length); i++) {
+      if (/\d{1,2}-(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-\d{2,4}/i.test(tdTexts[i])) {
+        dateIdx = i;
+        dateStr = tdTexts[i];
+        break;
+      }
+    }
+    
+    if (dateIdx < 0 || !dateStr) continue;
+    
+    // Skip header/label rows
+    if (dateStr.toLowerCase().includes("date") || 
+        dateStr.toLowerCase().includes("total") ||
+        dateStr.toLowerCase().includes("trading")) continue;
+    
+    // Log first date row for debugging
+    if (!debugSampleLogged) {
+      console.log(`Date row sample (${tdTexts.length} cols): ${JSON.stringify(tdTexts.slice(0, 10))}`);
+      debugSampleLogged = true;
+    }
+    
+    // Parse date
     let parsedDate: Date | null = null;
     
-    // Try DD-MMM-YYYY format (e.g., "16-Jan-2026")
     const dmyMatch = dateStr.match(/(\d{1,2})[-\/](\w{3})[-\/](\d{2,4})/i);
     if (dmyMatch) {
       const months: { [key: string]: number } = {
@@ -151,59 +178,35 @@ function parseHistoricalData(html: string, symbol: string): HistoricalDataPoint[
       const month = months[dmyMatch[2].toLowerCase()];
       let year = parseInt(dmyMatch[3]);
       if (year < 100) year += 2000;
-      if (month !== undefined) {
+      if (month !== undefined && !isNaN(day) && !isNaN(year)) {
         parsedDate = new Date(year, month, day);
-      }
-    }
-    
-    // Try DD/MM/YYYY format
-    if (!parsedDate) {
-      const numMatch = dateStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
-      if (numMatch) {
-        const day = parseInt(numMatch[1]);
-        const month = parseInt(numMatch[2]) - 1;
-        let year = parseInt(numMatch[3]);
-        if (year < 100) year += 2000;
-        parsedDate = new Date(year, month, day);
-      }
-    }
-    
-    // Try YYYY-MM-DD format
-    if (!parsedDate) {
-      const isoMatch = dateStr.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
-      if (isoMatch) {
-        parsedDate = new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]));
       }
     }
     
     if (!parsedDate || isNaN(parsedDate.getTime())) continue;
     
-    // Parse price data based on number of columns
-    // Common formats: Date, LTP/Close, High, Low, Open, Volume, Trade, Value
-    let close = 0, high = 0, low = 0, open = 0, volume = 0;
+    // Columns after date: TRADE(0), VALUE(1), VOLUME(2), HIGH(3), LOW(4), CLOSEP(5), YCP(6)
+    const remainingCols = tdTexts.slice(dateIdx + 1);
     
-    if (tdTexts.length >= 6) {
-      // Full OHLCV data
-      close = parseNumber(tdTexts[1]);
-      high = parseNumber(tdTexts[2]);
-      low = parseNumber(tdTexts[3]);
-      open = parseNumber(tdTexts[4]) || close;
-      volume = parseIntNumber(tdTexts[5]);
-    } else if (tdTexts.length >= 2) {
-      // Just date and close price
-      close = parseNumber(tdTexts[1]);
-      high = close;
-      low = close;
-      open = close;
-      volume = tdTexts.length >= 3 ? parseIntNumber(tdTexts[2]) : 0;
-    }
+    if (remainingCols.length < 6) continue;
     
-    if (close > 0) {
+    const trade = parseIntNumber(remainingCols[0]);
+    const valueMn = parseNumber(remainingCols[1]);
+    const volume = parseIntNumber(remainingCols[2]);
+    const high = parseNumber(remainingCols[3]);
+    const low = parseNumber(remainingCols[4]);
+    const close = parseNumber(remainingCols[5]);
+    const ycp = remainingCols.length > 6 ? parseNumber(remainingCols[6]) : close;
+    
+    const open = ycp > 0 ? ycp : close;
+    
+    // Validate that we have reasonable price data
+    if (close > 0 && high > 0 && low > 0) {
       data.push({
         date: parsedDate.toISOString(),
         open: open || close,
-        high: high || close,
-        low: low || close,
+        high,
+        low,
         close,
         volume,
       });
@@ -214,6 +217,13 @@ function parseHistoricalData(html: string, symbol: string): HistoricalDataPoint[
   data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   
   console.log(`Parsed ${data.length} historical data points for ${symbol}`);
+  
+  // Debug: log first and last entries if any
+  if (data.length > 0) {
+    console.log(`First entry: ${JSON.stringify(data[0])}`);
+    console.log(`Last entry: ${JSON.stringify(data[data.length - 1])}`);
+  }
+  
   return data;
 }
 
