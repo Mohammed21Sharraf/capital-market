@@ -52,14 +52,14 @@ export function StrengthMeter({ stocks }: StrengthMeterProps) {
   const unchangedDash = (unchangedPercent / 100) * circumference;
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
       {/* Winner/Loser Pie */}
-      <div className="rounded-lg border border-border bg-card p-4">
-        <h3 className="mb-4 text-sm font-semibold text-foreground">Market Strength</h3>
-        <div className="flex items-center justify-center gap-6">
+      <div className="rounded-lg border border-border bg-card p-3 sm:p-4">
+        <h3 className="mb-3 sm:mb-4 text-xs sm:text-sm font-semibold text-foreground">Market Strength</h3>
+        <div className="flex items-center justify-center gap-4 sm:gap-6">
           {/* Donut Chart */}
-          <div className="relative h-28 w-28">
-            <svg className="h-28 w-28 -rotate-90 transform" viewBox="0 0 100 100">
+          <div className="relative h-20 w-20 sm:h-28 sm:w-28">
+            <svg className="h-20 w-20 sm:h-28 sm:w-28 -rotate-90 transform" viewBox="0 0 100 100">
               {/* Advancers */}
               <circle
                 cx="50"
@@ -98,67 +98,65 @@ export function StrengthMeter({ stocks }: StrengthMeterProps) {
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-lg font-bold text-foreground">{total}</span>
-              <span className="text-[10px] text-muted-foreground">Stocks</span>
+              <span className="text-sm sm:text-lg font-bold text-foreground">{total}</span>
+              <span className="text-[8px] sm:text-[10px] text-muted-foreground">Stocks</span>
             </div>
           </div>
 
           {/* Legend */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-[hsl(var(--price-up))]"/>
-              <span className="text-xs text-muted-foreground">Advancers</span>
-              <span className="font-mono text-sm font-semibold text-price-up">{advancers}</span>
+          <div className="flex flex-col gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-[hsl(var(--price-up))]"/>
+              <span className="text-[10px] sm:text-xs text-muted-foreground">Advancers</span>
+              <span className="font-mono text-xs sm:text-sm font-semibold text-price-up">{advancers}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-[hsl(var(--price-down))]"/>
-              <span className="text-xs text-muted-foreground">Decliners</span>
-              <span className="font-mono text-sm font-semibold text-price-down">{decliners}</span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-[hsl(var(--price-down))]"/>
+              <span className="text-[10px] sm:text-xs text-muted-foreground">Decliners</span>
+              <span className="font-mono text-xs sm:text-sm font-semibold text-price-down">{decliners}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-[hsl(var(--price-neutral))]"/>
-              <span className="text-xs text-muted-foreground">Unchanged</span>
-              <span className="font-mono text-sm font-semibold text-price-neutral">{unchanged}</span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-[hsl(var(--price-neutral))]"/>
+              <span className="text-[10px] sm:text-xs text-muted-foreground">Unchanged</span>
+              <span className="font-mono text-xs sm:text-sm font-semibold text-price-neutral">{unchanged}</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Sentiment Meter */}
-      <div className="rounded-lg border border-border bg-card p-4">
-        <h3 className="mb-4 text-sm font-semibold text-foreground">Market Sentiment</h3>
-        <div className="flex flex-col items-center gap-3">
+      <div className="rounded-lg border border-border bg-card p-3 sm:p-4">
+        <h3 className="mb-3 sm:mb-4 text-xs sm:text-sm font-semibold text-foreground">Market Sentiment</h3>
+        <div className="flex flex-col items-center gap-2 sm:gap-3">
           {/* Sentiment Score */}
           <div className="text-center">
-            <span className={`text-3xl font-bold ${getSentimentColor(sentimentScore)}`}>
+            <span className={`text-xl sm:text-3xl font-bold ${getSentimentColor(sentimentScore)}`}>
               {getSentimentLabel(sentimentScore)}
             </span>
           </div>
 
           {/* Gauge Bar */}
           <div className="relative w-full">
-            <div className="flex h-3 w-full overflow-hidden rounded-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500">
+            <div className="flex h-2.5 sm:h-3 w-full overflow-hidden rounded-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500">
               {/* Indicator */}
               <div
-                className="absolute top-1/2 h-5 w-1.5 -translate-y-1/2 rounded-full bg-white shadow-lg transition-all duration-500"
+                className="absolute top-1/2 h-4 w-1 sm:h-5 sm:w-1.5 -translate-y-1/2 rounded-full bg-white shadow-lg transition-all duration-500"
                 style={{ left: `calc(${sentimentScore}% - 3px)` }}
               />
             </div>
           </div>
 
           {/* Labels */}
-          <div className="flex w-full justify-between text-[10px] text-muted-foreground">
-            <span>Ex. Bear</span>
+          <div className="flex w-full justify-between text-[8px] sm:text-[10px] text-muted-foreground">
             <span>Bear</span>
             <span>Neutral</span>
             <span>Bull</span>
-            <span>Ex. Bull</span>
           </div>
 
           {/* Score */}
-          <div className="mt-2 text-center">
-            <span className="text-xs text-muted-foreground">Advancer Ratio: </span>
-            <span className={`font-mono text-sm font-semibold ${getSentimentColor(sentimentScore)}`}>
+          <div className="mt-1 sm:mt-2 text-center">
+            <span className="text-[10px] sm:text-xs text-muted-foreground">Advancer Ratio: </span>
+            <span className={`font-mono text-xs sm:text-sm font-semibold ${getSentimentColor(sentimentScore)}`}>
               {sentimentScore}%
             </span>
           </div>

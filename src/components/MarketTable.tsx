@@ -198,16 +198,16 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
   }) => (
     <th
       className={cn(
-        "cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground",
+        "cursor-pointer px-2 py-1.5 sm:px-3 sm:py-2 text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground",
         className
       )}
       onClick={() => handleSort(sortKeyName)}
     >
-      <div className={cn("flex items-center gap-1", align === "right" && "justify-end")}>
+      <div className={cn("flex items-center gap-0.5 sm:gap-1", align === "right" && "justify-end")}>
         <span>{label}</span>
         <ArrowUpDown
           className={cn(
-            "h-3 w-3",
+            "h-2.5 w-2.5 sm:h-3 sm:w-3",
             sortKey === sortKeyName && "text-primary"
           )}
         />
@@ -236,60 +236,60 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
     <>
       <div className="rounded-lg border border-border bg-card">
         {/* Filter Toggle Bar */}
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium text-foreground">Column Filters</span>
+        <div className="flex items-center justify-between border-b border-border px-2 py-2 sm:px-4 sm:py-3">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+            <span className="text-xs sm:text-sm font-medium text-foreground">Filters</span>
             {hasActiveFilters && (
-              <span className="rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
+              <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] sm:text-xs text-primary-foreground">
                 Active
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {hasActiveFilters && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={clearFilters}
-                className="h-7 text-xs"
+                className="h-6 sm:h-7 text-[10px] sm:text-xs px-1.5 sm:px-2"
               >
-                <X className="mr-1 h-3 w-3" />
-                Clear All
+                <X className="mr-0.5 sm:mr-1 h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                Clear
               </Button>
             )}
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowFilters(!showFilters)}
-              className="h-7 text-xs"
+              className="h-6 sm:h-7 text-[10px] sm:text-xs px-1.5 sm:px-2"
             >
-              {showFilters ? "Hide Filters" : "Show Filters"}
+              {showFilters ? "Hide" : "Show"}
             </Button>
           </div>
         </div>
 
         {/* Filter Row */}
         {showFilters && (
-          <div className="grid grid-cols-2 gap-3 border-b border-border bg-muted/30 p-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 border-b border-border bg-muted/30 p-2 sm:p-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
             {/* Code Filter */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Code</label>
+            <div className="space-y-0.5 sm:space-y-1">
+              <label className="text-[10px] sm:text-xs font-medium text-muted-foreground">Code</label>
               <Input
                 type="text"
-                placeholder="Search code..."
+                placeholder="Search..."
                 value={filters.code}
                 onChange={(e) => updateFilter("code", e.target.value)}
-                className="h-8 text-sm"
+                className="h-7 sm:h-8 text-xs sm:text-sm"
               />
             </div>
 
             {/* Sector Filter */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Sector</label>
+            <div className="space-y-0.5 sm:space-y-1">
+              <label className="text-[10px] sm:text-xs font-medium text-muted-foreground">Sector</label>
               <Select value={filters.sector} onValueChange={(v) => updateFilter("sector", v === "all" ? "" : v)}>
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue placeholder="All Sectors" />
+                <SelectTrigger className="h-7 sm:h-8 text-xs sm:text-sm">
+                  <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover">
                   <SelectItem value="all">All Sectors</SelectItem>
@@ -303,11 +303,11 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
             </div>
 
             {/* Category Filter */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Category</label>
+            <div className="space-y-0.5 sm:space-y-1">
+              <label className="text-[10px] sm:text-xs font-medium text-muted-foreground">Category</label>
               <Select value={filters.category} onValueChange={(v) => updateFilter("category", v === "all" ? "" : v)}>
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue placeholder="All Categories" />
+                <SelectTrigger className="h-7 sm:h-8 text-xs sm:text-sm">
+                  <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover">
                   <SelectItem value="all">All Categories</SelectItem>
@@ -321,85 +321,85 @@ export function MarketTable({ stocks, isLoading }: MarketTableProps) {
             </div>
 
             {/* Close (LTP) Range */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Close (LTP)</label>
+            <div className="space-y-0.5 sm:space-y-1">
+              <label className="text-[10px] sm:text-xs font-medium text-muted-foreground">Close</label>
               <div className="flex gap-1">
                 <Input
                   type="number"
                   placeholder="Min"
                   value={filters.closeMin}
                   onChange={(e) => updateFilter("closeMin", e.target.value)}
-                  className="h-8 text-sm"
+                  className="h-7 sm:h-8 text-xs sm:text-sm"
                 />
                 <Input
                   type="number"
                   placeholder="Max"
                   value={filters.closeMax}
                   onChange={(e) => updateFilter("closeMax", e.target.value)}
-                  className="h-8 text-sm"
+                  className="h-7 sm:h-8 text-xs sm:text-sm"
                 />
               </div>
             </div>
 
             {/* Value Range */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Value (Mn)</label>
+            <div className="space-y-0.5 sm:space-y-1 hidden sm:block">
+              <label className="text-[10px] sm:text-xs font-medium text-muted-foreground">Value</label>
               <div className="flex gap-1">
                 <Input
                   type="number"
                   placeholder="Min"
                   value={filters.valueMin}
                   onChange={(e) => updateFilter("valueMin", e.target.value)}
-                  className="h-8 text-sm"
+                  className="h-7 sm:h-8 text-xs sm:text-sm"
                 />
                 <Input
                   type="number"
                   placeholder="Max"
                   value={filters.valueMax}
                   onChange={(e) => updateFilter("valueMax", e.target.value)}
-                  className="h-8 text-sm"
+                  className="h-7 sm:h-8 text-xs sm:text-sm"
                 />
               </div>
             </div>
 
             {/* Trade Range */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Trade</label>
+            <div className="space-y-0.5 sm:space-y-1 hidden md:block">
+              <label className="text-[10px] sm:text-xs font-medium text-muted-foreground">Trade</label>
               <div className="flex gap-1">
                 <Input
                   type="number"
                   placeholder="Min"
                   value={filters.tradeMin}
                   onChange={(e) => updateFilter("tradeMin", e.target.value)}
-                  className="h-8 text-sm"
+                  className="h-7 sm:h-8 text-xs sm:text-sm"
                 />
                 <Input
                   type="number"
                   placeholder="Max"
                   value={filters.tradeMax}
                   onChange={(e) => updateFilter("tradeMax", e.target.value)}
-                  className="h-8 text-sm"
+                  className="h-7 sm:h-8 text-xs sm:text-sm"
                 />
               </div>
             </div>
 
             {/* Volume Range */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Volume</label>
+            <div className="space-y-0.5 sm:space-y-1 hidden lg:block">
+              <label className="text-[10px] sm:text-xs font-medium text-muted-foreground">Volume</label>
               <div className="flex gap-1">
                 <Input
                   type="number"
                   placeholder="Min"
                   value={filters.volumeMin}
                   onChange={(e) => updateFilter("volumeMin", e.target.value)}
-                  className="h-8 text-sm"
+                  className="h-7 sm:h-8 text-xs sm:text-sm"
                 />
                 <Input
                   type="number"
                   placeholder="Max"
                   value={filters.volumeMax}
                   onChange={(e) => updateFilter("volumeMax", e.target.value)}
-                  className="h-8 text-sm"
+                  className="h-7 sm:h-8 text-xs sm:text-sm"
                 />
               </div>
             </div>
