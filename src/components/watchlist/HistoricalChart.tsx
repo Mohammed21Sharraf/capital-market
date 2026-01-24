@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Stock } from "@/types/market";
 import { useStockHistory, Timeframe, HistoricalDataPoint } from "@/hooks/useStockHistory";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, TrendingUp, TrendingDown } from "lucide-react";
@@ -32,7 +33,7 @@ const TIMEFRAMES: { value: Timeframe; label: string }[] = [
 export function HistoricalChart({ stock }: HistoricalChartProps) {
   const [timeframe, setTimeframe] = useState<Timeframe>("1M");
 
-  const { data, isLoading, error } = useStockHistory({
+  const { data, isLoading, error, source } = useStockHistory({
     symbol: stock.symbol,
     timeframe,
     currentPrice: stock.ltp,
@@ -78,26 +79,38 @@ export function HistoricalChart({ stock }: HistoricalChartProps) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg flex items-center gap-2">
-            {stock.symbol} Price History
-            {chartMetrics && (
-              <span
-                className={cn(
-                  "text-sm font-normal flex items-center gap-1",
-                  chartMetrics.isPositive ? "text-success" : "text-destructive"
-                )}
-              >
-                {chartMetrics.isPositive ? (
-                  <TrendingUp className="h-4 w-4" />
-                ) : (
-                  <TrendingDown className="h-4 w-4" />
-                )}
-                {chartMetrics.isPositive ? "+" : ""}
-                {chartMetrics.changePercent.toFixed(2)}%
-              </span>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              {stock.symbol} Price History
+              {chartMetrics && (
+                <span
+                  className={cn(
+                    "text-sm font-normal flex items-center gap-1",
+                    chartMetrics.isPositive ? "text-success" : "text-destructive"
+                  )}
+                >
+                  {chartMetrics.isPositive ? (
+                    <TrendingUp className="h-4 w-4" />
+                  ) : (
+                    <TrendingDown className="h-4 w-4" />
+                  )}
+                  {chartMetrics.isPositive ? "+" : ""}
+                  {chartMetrics.changePercent.toFixed(2)}%
+                </span>
+              )}
+            </CardTitle>
+            {source === "simulated" && !isLoading && (
+              <Badge variant="outline" className="text-xs text-muted-foreground border-muted-foreground/30">
+                Simulated Data
+              </Badge>
             )}
-          </CardTitle>
+            {source === "dse" && !isLoading && (
+              <Badge variant="outline" className="text-xs text-success border-success/30">
+                Live DSE Data
+              </Badge>
+            )}
+          </div>
 
           {/* Timeframe Selector */}
           <div className="flex gap-1">

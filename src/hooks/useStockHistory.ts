@@ -32,6 +32,7 @@ export function useStockHistory({
   const [data, setData] = useState<HistoricalDataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [source, setSource] = useState<string>("unknown");
 
   const fetchHistory = useCallback(async () => {
     if (!symbol) return;
@@ -60,6 +61,7 @@ export function useStockHistory({
 
       if (response?.data) {
         setData(response.data);
+        setSource(response.source || "unknown");
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to fetch historical data";
@@ -78,6 +80,7 @@ export function useStockHistory({
     data,
     isLoading,
     error,
+    source,
     refetch: fetchHistory,
   };
 }
