@@ -224,11 +224,11 @@ export function StockSearch({ stocks, onStockSelect }: StockSearchProps) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-3 rounded-lg border border-border bg-secondary/80 px-4 py-2.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground min-w-[200px] sm:min-w-[280px]"
+        className="flex items-center gap-1.5 sm:gap-3 rounded-lg border border-border bg-secondary/80 px-2 py-1.5 sm:px-4 sm:py-2.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground min-w-[80px] sm:min-w-[200px] md:min-w-[280px] flex-shrink-0"
       >
-        <Search className="h-4 w-4" />
-        <span className="text-sm">Search</span>
-        <kbd className="pointer-events-none ml-auto flex h-6 select-none items-center gap-1 rounded border border-border bg-muted px-2 font-mono text-xs font-medium">
+        <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+        <span className="text-xs sm:text-sm">Search</span>
+        <kbd className="pointer-events-none ml-auto hidden sm:flex h-5 sm:h-6 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 sm:px-2 font-mono text-[10px] sm:text-xs font-medium">
           <span>⌘</span>K
         </kbd>
       </button>

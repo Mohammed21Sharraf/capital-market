@@ -68,19 +68,19 @@ export function MarketSummary({ stocks }: MarketSummaryProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 md:gap-4">
+    <div className="grid grid-cols-2 gap-2 xs:gap-3 sm:grid-cols-3 md:grid-cols-5 md:gap-4">
       {stats.map((stat) => (
         <div
           key={stat.label}
-          className={`rounded-lg border-2 p-3 transition-all hover:scale-[1.02] md:p-4 ${stat.bgColor} ${stat.borderColor}`}
+          className={`rounded-lg border-2 p-2 xs:p-3 transition-all hover:scale-[1.02] md:p-4 ${stat.bgColor} ${stat.borderColor}`}
         >
-          <div className="flex items-center gap-2 md:gap-3">
-            <div className={`rounded-xl ${stat.bgColor} p-2 md:p-2.5`}>
-              <stat.icon className={`h-4 w-4 md:h-5 md:w-5 ${stat.color}`} />
+          <div className="flex items-center gap-1.5 xs:gap-2 md:gap-3">
+            <div className={`rounded-lg xs:rounded-xl ${stat.bgColor} p-1.5 xs:p-2 md:p-2.5`}>
+              <stat.icon className={`h-3.5 w-3.5 xs:h-4 xs:w-4 md:h-5 md:w-5 ${stat.color}`} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[10px] font-medium text-muted-foreground md:text-xs">{stat.label}</p>
-              <p className={`font-mono text-sm font-bold md:text-lg ${stat.color}`}>
+              <p className="truncate text-[8px] xs:text-[10px] font-medium text-muted-foreground md:text-xs">{stat.label}</p>
+              <p className={`font-mono text-xs xs:text-sm font-bold md:text-lg ${stat.color}`}>
                 {stat.value}
               </p>
             </div>

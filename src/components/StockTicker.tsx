@@ -11,25 +11,25 @@ const TickerItem = ({ stock }: { stock: Stock }) => {
   const isNegative = stock.change < 0;
 
   return (
-    <div className="inline-flex items-center gap-3 px-4 py-2 border-r border-border/50">
-      <span className="font-medium text-foreground whitespace-nowrap">
+    <div className="inline-flex items-center gap-1.5 sm:gap-3 px-2 sm:px-4 py-1 sm:py-2 border-r border-border/50">
+      <span className="font-medium text-foreground whitespace-nowrap text-xs sm:text-sm">
         {stock.symbol}
       </span>
-      <span className="font-mono text-sm text-foreground/90 whitespace-nowrap">
+      <span className="font-mono text-[10px] sm:text-sm text-foreground/90 whitespace-nowrap">
         {stock.ltp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </span>
       <div
         className={cn(
-          "inline-flex items-center gap-1 font-mono text-xs whitespace-nowrap",
+          "inline-flex items-center gap-0.5 sm:gap-1 font-mono text-[10px] sm:text-xs whitespace-nowrap",
           isPositive && "text-price-up",
           isNegative && "text-price-down",
           !isPositive && !isNegative && "text-price-neutral"
         )}
       >
         {isPositive ? (
-          <TrendingUp className="h-3 w-3" />
+          <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
         ) : isNegative ? (
-          <TrendingDown className="h-3 w-3" />
+          <TrendingDown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
         ) : null}
         <span>
           {isPositive ? "▲" : isNegative ? "▼" : ""}

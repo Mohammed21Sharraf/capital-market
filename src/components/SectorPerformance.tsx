@@ -98,17 +98,17 @@ export function SectorPerformance({ stocks }: SectorPerformanceProps) {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2">
       {/* Pie Chart */}
-      <div className="h-80">
+      <div className="h-48 sm:h-64 md:h-80">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={sectorData}
               cx="50%"
               cy="50%"
-              innerRadius={60}
-              outerRadius={100}
+              innerRadius={40}
+              outerRadius={70}
               paddingAngle={2}
               dataKey="value"
             >
@@ -127,32 +127,32 @@ export function SectorPerformance({ stocks }: SectorPerformanceProps) {
       </div>
 
       {/* Sector List */}
-      <div className="space-y-2 overflow-auto pr-2" style={{ maxHeight: 320 }}>
+      <div className="space-y-1.5 sm:space-y-2 overflow-auto pr-1 sm:pr-2 max-h-48 sm:max-h-64 md:max-h-80">
         {sectorData.map((sector) => {
           const percentage = totalValue > 0 ? ((sector.value / totalValue) * 100).toFixed(1) : "0";
           return (
             <div
               key={sector.name}
-              className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-2 transition-colors hover:bg-secondary/50"
+              className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-1.5 sm:p-2 transition-colors hover:bg-secondary/50"
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
                 <div
-                  className="h-3 w-3 rounded-full"
+                  className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full flex-shrink-0"
                   style={{ backgroundColor: SECTOR_COLORS[sector.name] || SECTOR_COLORS["Others"] }}
                 />
-                <div>
-                  <p className="text-sm font-medium text-foreground">{sector.name}</p>
-                  <p className="text-xs text-muted-foreground">{sector.stocks} stocks</p>
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-foreground truncate">{sector.name}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">{sector.stocks} stocks</p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="font-mono text-sm font-semibold text-foreground">
+              <div className="text-right flex-shrink-0 ml-2">
+                <p className="font-mono text-xs sm:text-sm font-semibold text-foreground">
                   {formatValue(sector.value)}
                 </p>
                 <div className="flex items-center justify-end gap-1">
-                  <span className="text-xs text-muted-foreground">{percentage}%</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground">{percentage}%</span>
                   <span
-                    className={`text-xs font-mono ${
+                    className={`text-[10px] sm:text-xs font-mono ${
                       sector.avgChange > 0
                         ? "text-price-up"
                         : sector.avgChange < 0
