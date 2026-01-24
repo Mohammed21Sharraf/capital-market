@@ -57,6 +57,7 @@ function delay(ms: number): Promise<void> {
 // Fetch with exponential backoff retry
 async function fetchWithRetry(
   url: string,
+  options: RequestInit = {},
   maxRetries: number = 3,
   baseDelayMs: number = 1000
 ): Promise<string> {
@@ -73,15 +74,23 @@ async function fetchWithRetry(
       }
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+
+      const defaultHeaders = {
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "accept-language": "en-US,en;q=0.5",
+        "cache-control": "no-cache",
+        "referer": "https://www.dsebd.org/",
+        "origin": "https://www.dsebd.org",
+      };
 
       const res = await fetch(url, {
+        ...options,
         signal: controller.signal,
         headers: {
-          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-          "accept-language": "en-US,en;q=0.5",
-          "cache-control": "no-cache",
+          ...defaultHeaders,
+          ...options.headers,
         },
       });
 
@@ -92,7 +101,7 @@ async function fetchWithRetry(
       }
 
       const text = await res.text();
-      console.log(`Fetched HTML successfully (${text.length} chars) on attempt ${attempt + 1}`);
+      console.log(`Fetched successfully (${text.length} chars) on attempt ${attempt + 1}`);
       return text;
 
     } catch (error) {
@@ -107,7 +116,6 @@ async function fetchWithRetry(
       console.warn(`Fetch attempt ${attempt + 1} failed: ${lastError.message}`);
 
       if (!isRetryable || attempt === maxRetries) {
-        console.error(`All ${maxRetries + 1} fetch attempts failed for ${url}`);
         throw lastError;
       }
     }
@@ -116,17 +124,42 @@ async function fetchWithRetry(
   throw lastError || new Error("Fetch failed after retries");
 }
 
-// Parse historical data from DSE displayCompany.php page
+// Get date range for timeframe
+function getDateRange(timeframe: Timeframe): { startDate: Date; endDate: Date } {
+  const endDate = new Date();
+  const startDate = new Date();
+  
+  switch (timeframe) {
+    case "1D":
+      startDate.setDate(startDate.getDate() - 7);
+      break;
+    case "1W":
+      startDate.setDate(startDate.getDate() - 14);
+      break;
+    case "1M":
+      startDate.setMonth(startDate.getMonth() - 1);
+      break;
+    case "3M":
+      startDate.setMonth(startDate.getMonth() - 3);
+      break;
+    case "6M":
+      startDate.setMonth(startDate.getMonth() - 6);
+      break;
+    case "1Y":
+      startDate.setFullYear(startDate.getFullYear() - 1);
+      break;
+  }
+  
+  return { startDate, endDate };
+}
+
+// Parse historical data from DSE pages (both displayCompany.php and archive pages)
 function parseHistoricalData(html: string, symbol: string): HistoricalDataPoint[] {
   const data: HistoricalDataPoint[] = [];
   
-  // DSE displayCompany.php has a "Day End Summary" section with historical data
-  // The historical price data table has a header row like:
-  // # | DATE | TRADE | VALUE(mn) | VOLUME | HIGH | LOW | CLOSEP | YCP
-  
-  // Find all table rows across the entire page
+  // Find all table rows
   const allRows = html.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
-  console.log(`Found ${allRows.length} total rows in page HTML`);
+  console.log(`Found ${allRows.length} total rows in HTML`);
   
   let debugSampleLogged = false;
   
@@ -137,15 +170,17 @@ function parseHistoricalData(html: string, symbol: string): HistoricalDataPoint[
     const tdMatches = Array.from(tr.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi));
     const tdTexts = tdMatches.map((x: RegExpMatchArray) => decodeHtmlEntities(x[1].replace(/<[^>]+>/g, "").trim()));
     
-    // Need enough columns for historical data
-    if (tdTexts.length < 7) continue;
+    // Need enough columns for price data
+    if (tdTexts.length < 6) continue;
     
     // Look for a date pattern in any of the first 3 columns
     let dateIdx = -1;
     let dateStr = "";
     
     for (let i = 0; i < Math.min(3, tdTexts.length); i++) {
-      if (/\d{1,2}-(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-\d{2,4}/i.test(tdTexts[i])) {
+      // Match various date formats: DD-Mon-YY, DD-Mon-YYYY, DD/MM/YYYY
+      if (/\d{1,2}[-\/](?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\/]\d{2,4}/i.test(tdTexts[i]) ||
+          /\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}/.test(tdTexts[i])) {
         dateIdx = i;
         dateStr = tdTexts[i];
         break;
@@ -161,13 +196,14 @@ function parseHistoricalData(html: string, symbol: string): HistoricalDataPoint[
     
     // Log first date row for debugging
     if (!debugSampleLogged) {
-      console.log(`Date row sample (${tdTexts.length} cols): ${JSON.stringify(tdTexts.slice(0, 10))}`);
+      console.log(`Date row sample (${tdTexts.length} cols): ${JSON.stringify(tdTexts.slice(0, 12))}`);
       debugSampleLogged = true;
     }
     
     // Parse date
     let parsedDate: Date | null = null;
     
+    // Try DD-Mon-YY format
     const dmyMatch = dateStr.match(/(\d{1,2})[-\/](\w{3})[-\/](\d{2,4})/i);
     if (dmyMatch) {
       const months: { [key: string]: number } = {
@@ -183,33 +219,90 @@ function parseHistoricalData(html: string, symbol: string): HistoricalDataPoint[
       }
     }
     
+    // Try DD/MM/YYYY format
+    if (!parsedDate) {
+      const numMatch = dateStr.match(/(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/);
+      if (numMatch) {
+        const day = parseInt(numMatch[1]);
+        const month = parseInt(numMatch[2]) - 1;
+        let year = parseInt(numMatch[3]);
+        if (year < 100) year += 2000;
+        if (month >= 0 && month <= 11 && !isNaN(day) && !isNaN(year)) {
+          parsedDate = new Date(year, month, day);
+        }
+      }
+    }
+    
     if (!parsedDate || isNaN(parsedDate.getTime())) continue;
     
-    // Columns after date: TRADE(0), VALUE(1), VOLUME(2), HIGH(3), LOW(4), CLOSEP(5), YCP(6)
+    // Remaining columns after date
     const remainingCols = tdTexts.slice(dateIdx + 1);
     
-    if (remainingCols.length < 6) continue;
+    if (remainingCols.length < 5) continue;
     
-    const trade = parseIntNumber(remainingCols[0]);
-    const valueMn = parseNumber(remainingCols[1]);
-    const volume = parseIntNumber(remainingCols[2]);
-    const high = parseNumber(remainingCols[3]);
-    const low = parseNumber(remainingCols[4]);
-    const close = parseNumber(remainingCols[5]);
-    const ycp = remainingCols.length > 6 ? parseNumber(remainingCols[6]) : close;
+    // Try to find price columns - look for patterns:
+    // Format 1: TRADING_CODE, LTP, HIGH, LOW, OPENP, CLOSEP, YCP, TRADE, VALUE, VOLUME
+    // Format 2: TRADE, VALUE(mn), VOLUME, HIGH, LOW, CLOSEP, YCP
     
-    const open = ycp > 0 ? ycp : close;
+    let high = 0, low = 0, close = 0, open = 0, volume = 0;
+    
+    // Check if first remaining column is a trading code (string)
+    const firstCol = remainingCols[0];
+    const isFirstColCode = /^[A-Z]+$/i.test(firstCol);
+    
+    if (isFirstColCode) {
+      // Format: CODE, LTP, HIGH, LOW, OPENP, CLOSEP, YCP, TRADE, VALUE, VOLUME
+      const ltp = parseNumber(remainingCols[1]);
+      high = parseNumber(remainingCols[2]);
+      low = parseNumber(remainingCols[3]);
+      open = parseNumber(remainingCols[4]);
+      close = parseNumber(remainingCols[5]) || ltp;
+      const ycp = parseNumber(remainingCols[6]);
+      volume = remainingCols.length > 9 ? parseIntNumber(remainingCols[9]) : 0;
+      if (open === 0) open = ycp > 0 ? ycp : close;
+    } else {
+      // Format: TRADE, VALUE(mn), VOLUME, HIGH, LOW, CLOSEP, YCP
+      // Or other numeric-first formats
+      const nums = remainingCols.map(parseNumber);
+      
+      // Find likely price columns (values between 1 and 10000)
+      const priceRange = nums.filter(n => n > 0.1 && n < 50000);
+      
+      if (priceRange.length >= 3) {
+        // Try to identify high, low, close from position
+        if (remainingCols.length >= 7) {
+          // Assume: TRADE(0), VALUE(1), VOLUME(2), HIGH(3), LOW(4), CLOSEP(5), YCP(6)
+          high = parseNumber(remainingCols[3]);
+          low = parseNumber(remainingCols[4]);
+          close = parseNumber(remainingCols[5]);
+          const ycp = parseNumber(remainingCols[6]);
+          volume = parseIntNumber(remainingCols[2]);
+          open = ycp > 0 ? ycp : close;
+        } else {
+          // Fallback: assume HIGH, LOW, CLOSE are the last three valid prices
+          high = priceRange[0];
+          low = priceRange[1];
+          close = priceRange[2];
+          open = close;
+        }
+      }
+    }
     
     // Validate that we have reasonable price data
     if (close > 0 && high > 0 && low > 0) {
-      data.push({
-        date: parsedDate.toISOString(),
-        open: open || close,
-        high,
-        low,
-        close,
-        volume,
-      });
+      // Sanity check: high >= close >= low (with some tolerance for bad data)
+      const validPrices = high >= low * 0.9;
+      
+      if (validPrices) {
+        data.push({
+          date: parsedDate.toISOString(),
+          open: open || close,
+          high: Math.max(high, close, open || close),
+          low: Math.min(low, close, open || close),
+          close,
+          volume,
+        });
+      }
     }
   }
   
@@ -218,26 +311,12 @@ function parseHistoricalData(html: string, symbol: string): HistoricalDataPoint[
   
   console.log(`Parsed ${data.length} historical data points for ${symbol}`);
   
-  // Debug: log first and last entries if any
   if (data.length > 0) {
     console.log(`First entry: ${JSON.stringify(data[0])}`);
     console.log(`Last entry: ${JSON.stringify(data[data.length - 1])}`);
   }
   
   return data;
-}
-
-// Get number of days based on timeframe
-function getTimeframeDays(timeframe: Timeframe): number {
-  switch (timeframe) {
-    case "1D": return 1;
-    case "1W": return 7;
-    case "1M": return 30;
-    case "3M": return 90;
-    case "6M": return 180;
-    case "1Y": return 365;
-    default: return 30;
-  }
 }
 
 // Generate simulated data as fallback
@@ -327,18 +406,91 @@ function generateFallbackData(
   return data;
 }
 
-// Filter data based on timeframe
-function filterByTimeframe(data: HistoricalDataPoint[], timeframe: Timeframe): HistoricalDataPoint[] {
-  if (data.length === 0) return data;
+// Try fetching from multiple DSE sources
+async function fetchFromDSE(symbol: string, timeframe: Timeframe): Promise<HistoricalDataPoint[]> {
+  const { startDate, endDate } = getDateRange(timeframe);
   
-  const days = getTimeframeDays(timeframe);
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - days);
+  // Try displayCompany.php first (has some historical data for some stocks)
+  try {
+    const companyUrl = `https://www.dsebd.org/displayCompany.php?name=${encodeURIComponent(symbol)}`;
+    console.log(`Trying displayCompany.php for ${symbol}`);
+    
+    const html = await fetchWithRetry(companyUrl, {}, 2, 1000);
+    const data = parseHistoricalData(html, symbol);
+    
+    if (data.length > 0) {
+      console.log(`Got ${data.length} data points from displayCompany.php`);
+      return data;
+    }
+  } catch (error) {
+    console.warn(`displayCompany.php failed: ${error instanceof Error ? error.message : error}`);
+  }
   
-  return data.filter(point => new Date(point.date) >= cutoffDate);
+  // Try close_price_archive.php with GET first to get the form, then POST
+  try {
+    const archiveUrl = `https://www.dsebd.org/close_price_archive.php`;
+    console.log(`Trying close_price_archive.php for ${symbol}`);
+    
+    // First, GET the page to establish session
+    await fetchWithRetry(archiveUrl, {}, 1, 500);
+    
+    // Then POST with form data
+    const formData = new URLSearchParams();
+    formData.append("inst", symbol);
+    formData.append("archive", "data");
+    formData.append("sday", startDate.getDate().toString());
+    formData.append("smonth", (startDate.getMonth() + 1).toString());
+    formData.append("syear", startDate.getFullYear().toString());
+    formData.append("eday", endDate.getDate().toString());
+    formData.append("emonth", (endDate.getMonth() + 1).toString());
+    formData.append("eyear", endDate.getFullYear().toString());
+    
+    const html = await fetchWithRetry(archiveUrl, {
+      method: "POST",
+      body: formData.toString(),
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+      },
+    }, 2, 1000);
+    
+    const data = parseHistoricalData(html, symbol);
+    
+    if (data.length > 0) {
+      console.log(`Got ${data.length} data points from close_price_archive.php`);
+      return data;
+    }
+  } catch (error) {
+    console.warn(`close_price_archive.php failed: ${error instanceof Error ? error.message : error}`);
+  }
+  
+  // Try data_archive.php for day-wise data
+  try {
+    const day = endDate.getDate();
+    const month = endDate.getMonth() + 1;
+    const year = endDate.getFullYear();
+    
+    const dayArchiveUrl = `https://www.dsebd.org/data_archive.php?view_archive=Archive&day=${day}&month=${month}&year=${year}`;
+    console.log(`Trying data_archive.php for ${symbol}`);
+    
+    const html = await fetchWithRetry(dayArchiveUrl, {}, 2, 1000);
+    const data = parseHistoricalData(html, symbol);
+    
+    // Filter by symbol if we got general market data
+    const symbolData = data.filter(d => d.close > 0);
+    
+    if (symbolData.length > 0) {
+      console.log(`Got ${symbolData.length} data points from data_archive.php`);
+      return symbolData;
+    }
+  } catch (error) {
+    console.warn(`data_archive.php failed: ${error instanceof Error ? error.message : error}`);
+  }
+  
+  console.log(`All DSE sources failed for ${symbol}`);
+  return [];
 }
 
-// Fetch historical data from DSE
+// Fetch historical data with fallback
 async function fetchHistoricalData(
   symbol: string,
   timeframe: Timeframe,
@@ -346,7 +498,7 @@ async function fetchHistoricalData(
   highPrice: number,
   lowPrice: number,
   volume: number
-): Promise<HistoricalDataPoint[]> {
+): Promise<{ data: HistoricalDataPoint[]; source: string }> {
   const cacheKey = `${symbol}_${timeframe}`;
   const now = Date.now();
   
@@ -354,49 +506,32 @@ async function fetchHistoricalData(
   const cached = historyCache.get(cacheKey);
   if (cached && now - cached.fetchedAt < CACHE_TTL_MS) {
     console.log(`Using cached data for ${cacheKey}`);
-    return cached.data;
+    return { data: cached.data, source: "cached" };
   }
   
   try {
-    // DSE close price archive URL
-    const url = `https://www.dsebd.org/displayCompany.php?name=${encodeURIComponent(symbol)}`;
-    console.log(`Fetching historical data from: ${url}`);
+    const data = await fetchFromDSE(symbol, timeframe);
     
-    const html = await fetchWithRetry(url, 2, 1000);
-    let data = parseHistoricalData(html, symbol);
-    
-    if (data.length === 0) {
-      // Try the close price archive page
-      const archiveUrl = `https://www.dsebd.org/close_price_archive.php`;
-      console.log(`No data found, trying archive: ${archiveUrl}`);
-      
-      // For archive, we might need to POST with symbol parameter
-      // For now, fall back to simulated data
-      console.log(`Falling back to simulated data for ${symbol}`);
-      data = generateFallbackData(currentPrice, highPrice, lowPrice, volume, timeframe);
-    } else {
+    if (data.length > 0) {
       // Filter by timeframe
-      data = filterByTimeframe(data, timeframe);
+      const { startDate } = getDateRange(timeframe);
+      const filteredData = data.filter(d => new Date(d.date) >= startDate);
       
-      if (data.length === 0) {
-        console.log(`No data in timeframe, using simulated data for ${symbol}`);
-        data = generateFallbackData(currentPrice, highPrice, lowPrice, volume, timeframe);
+      if (filteredData.length > 0) {
+        historyCache.set(cacheKey, { data: filteredData, fetchedAt: now });
+        return { data: filteredData, source: "dse" };
       }
     }
-    
-    // Cache the result
-    historyCache.set(cacheKey, { data, fetchedAt: now });
-    
-    return data;
   } catch (error) {
-    console.error(`Error fetching historical data for ${symbol}:`, error);
-    
-    // Fall back to simulated data
-    const fallbackData = generateFallbackData(currentPrice, highPrice, lowPrice, volume, timeframe);
-    historyCache.set(cacheKey, { data: fallbackData, fetchedAt: now });
-    
-    return fallbackData;
+    console.error(`Error fetching from DSE: ${error instanceof Error ? error.message : error}`);
   }
+  
+  // Fall back to simulated data
+  console.log(`Using simulated data for ${symbol}`);
+  const fallbackData = generateFallbackData(currentPrice, highPrice, lowPrice, volume, timeframe);
+  historyCache.set(cacheKey, { data: fallbackData, fetchedAt: now });
+  
+  return { data: fallbackData, source: "simulated" };
 }
 
 serve(async (req) => {
@@ -439,7 +574,7 @@ serve(async (req) => {
 
     console.log(`Historical data request - symbol: ${symbol}, timeframe: ${timeframe}`);
 
-    const data = await fetchHistoricalData(
+    const { data, source } = await fetchHistoricalData(
       symbol.toUpperCase(),
       timeframe,
       currentPrice,
@@ -454,7 +589,7 @@ serve(async (req) => {
         timeframe,
         data,
         count: data.length,
-        source: data.length > 0 && !data[0].date.includes("T") ? "dse" : "simulated",
+        source,
         timestamp: new Date().toISOString(),
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
