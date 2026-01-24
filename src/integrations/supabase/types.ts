@@ -14,7 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      historical_prices: {
+        Row: {
+          close: number
+          created_at: string
+          date: string
+          high: number
+          id: string
+          low: number
+          open: number
+          symbol: string
+          updated_at: string
+          volume: number
+        }
+        Insert: {
+          close: number
+          created_at?: string
+          date: string
+          high: number
+          id?: string
+          low: number
+          open: number
+          symbol: string
+          updated_at?: string
+          volume?: number
+        }
+        Update: {
+          close?: number
+          created_at?: string
+          date?: string
+          high?: number
+          id?: string
+          low?: number
+          open?: number
+          symbol?: string
+          updated_at?: string
+          volume?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
