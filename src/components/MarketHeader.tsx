@@ -1,4 +1,4 @@
-import { RefreshCw, TrendingUp, Clock, Activity, Zap, Star, Eye, Briefcase } from "lucide-react";
+import { RefreshCw, TrendingUp, Clock, Activity, Zap, Star, Eye, Briefcase, BarChart3 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { MarketStatus, Stock } from "@/types/market";
 import { Button } from "@/components/ui/button";
@@ -127,6 +127,16 @@ export function MarketHeader({
               >
                 <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span className="hidden xs:inline sm:inline">Bird's Eye</span>
+              </Button>
+            </Link>
+            <Link to="/historical">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="gap-1 sm:gap-1.5 rounded-full px-2 sm:px-3 h-8 sm:h-9 text-xs hover:bg-primary/10 hover:text-primary transition-colors flex-shrink-0"
+              >
+                <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline sm:inline">Historical</span>
               </Button>
             </Link>
 
