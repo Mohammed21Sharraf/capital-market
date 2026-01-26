@@ -28,6 +28,8 @@ const TIMEFRAMES: { value: Timeframe; label: string }[] = [
   { value: "3M", label: "3M" },
   { value: "6M", label: "6M" },
   { value: "1Y", label: "1Y" },
+  { value: "10Y", label: "10Y" },
+  { value: "Max", label: "Max" },
 ];
 
 export function HistoricalChart({ stock }: HistoricalChartProps) {

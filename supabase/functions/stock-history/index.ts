@@ -16,7 +16,7 @@ interface HistoricalDataPoint {
   volume: number;
 }
 
-type Timeframe = "1D" | "1W" | "1M" | "3M" | "6M" | "1Y";
+type Timeframe = "1D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "10Y" | "Max";
 
 // Cache for historical data
 type CachedHistory = { data: HistoricalDataPoint[]; fetchedAt: number; source: string };
@@ -46,6 +46,12 @@ function getDateRange(timeframe: Timeframe): { startDate: Date; endDate: Date } 
       break;
     case "1Y":
       startDate.setFullYear(startDate.getFullYear() - 1);
+      break;
+    case "10Y":
+      startDate.setFullYear(startDate.getFullYear() - 10);
+      break;
+    case "Max":
+      startDate.setFullYear(2000); // Go back to year 2000 for max data
       break;
   }
   
@@ -148,6 +154,14 @@ function generateFallbackData(
       break;
     case "1Y":
       numPoints = 252;
+      intervalMs = 24 * 60 * 60 * 1000;
+      break;
+    case "10Y":
+      numPoints = 2520; // ~10 years of trading days
+      intervalMs = 24 * 60 * 60 * 1000;
+      break;
+    case "Max":
+      numPoints = 5000; // Max historical points
       intervalMs = 24 * 60 * 60 * 1000;
       break;
     default:
