@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import * as XLSX from "xlsx";
 
 interface ParsedRow {
   symbol: string;
@@ -31,6 +32,86 @@ export default function Admin() {
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+
+  // Parse Excel file with Date in rows and Symbols in columns (closing prices only)
+  const parseExcelPivot = useCallback((workbook: XLSX.WorkBook): ParsedRow[] => {
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const jsonData = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 });
+    
+    if (jsonData.length < 2) return [];
+    
+    // First row is headers: Date, Symbol1, Symbol2, ...
+    const headers = jsonData[0] as unknown[];
+    const dateColIdx = 0; // First column is Date
+    const symbols = headers.slice(1).map((h) => String(h).trim().toUpperCase());
+    
+    const data: ParsedRow[] = [];
+    
+    // Process each row (starting from row 1, skipping header)
+    for (let rowIdx = 1; rowIdx < jsonData.length; rowIdx++) {
+      const row = jsonData[rowIdx] as unknown[];
+      if (!row || row.length === 0 || !row[dateColIdx]) continue;
+      
+      // Parse date - Excel dates can be numbers or strings
+      let parsedDate: Date | null = null;
+      const dateVal = row[dateColIdx];
+      
+      if (typeof dateVal === "number") {
+        // Excel serial date
+        parsedDate = XLSX.SSF.parse_date_code(dateVal) 
+          ? new Date((dateVal - 25569) * 86400 * 1000)
+          : null;
+      } else if (typeof dateVal === "string") {
+        const dateStr = dateVal.trim();
+        // Try multiple date formats
+        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
+          // DD/MM/YYYY or MM/DD/YYYY - assume DD/MM/YYYY for DSE data
+          const parts = dateStr.split("/");
+          parsedDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+        } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+          parsedDate = new Date(dateStr);
+        } else {
+          parsedDate = new Date(dateStr);
+        }
+      }
+      
+      if (!parsedDate || isNaN(parsedDate.getTime())) continue;
+      
+      const dateStr = parsedDate.toISOString().split("T")[0];
+      
+      // Process each symbol column
+      for (let colIdx = 1; colIdx < row.length; colIdx++) {
+        const symbol = symbols[colIdx - 1];
+        if (!symbol) continue;
+        
+        const closeVal = row[colIdx];
+        let close = 0;
+        
+        if (typeof closeVal === "number") {
+          close = closeVal;
+        } else if (typeof closeVal === "string") {
+          // Handle comma-formatted numbers like "1,006.0"
+          const cleanVal = closeVal.replace(/,/g, "").trim();
+          close = parseFloat(cleanVal) || 0;
+        }
+        
+        // Skip if no valid close price
+        if (close <= 0 || isNaN(close)) continue;
+        
+        data.push({
+          symbol,
+          date: dateStr,
+          open: close,
+          high: close,
+          low: close,
+          close,
+          volume: 0,
+        });
+      }
+    }
+    
+    return data;
+  }, []);
 
   const parseCSV = useCallback((text: string): ParsedRow[] => {
     const lines = text.trim().split("\n");
@@ -106,33 +187,53 @@ export default function Admin() {
   }, []);
 
   const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       const selectedFile = e.target.files?.[0];
       if (!selectedFile) return;
 
-      if (!selectedFile.name.endsWith(".csv")) {
-        toast.error("Please select a CSV file");
+      const isExcel = selectedFile.name.endsWith(".xlsx") || selectedFile.name.endsWith(".xls");
+      const isCSV = selectedFile.name.endsWith(".csv");
+
+      if (!isExcel && !isCSV) {
+        toast.error("Please select a CSV or Excel (.xlsx/.xls) file");
         return;
       }
 
       setFile(selectedFile);
       setImportResult(null);
 
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const text = event.target?.result as string;
-        const parsed = parseCSV(text);
-        setParsedData(parsed);
-        
-        if (parsed.length > 0) {
-          toast.success(`Parsed ${parsed.length} rows from CSV`);
+      try {
+        if (isExcel) {
+          const arrayBuffer = await selectedFile.arrayBuffer();
+          const workbook = XLSX.read(arrayBuffer, { type: "array" });
+          const parsed = parseExcelPivot(workbook);
+          setParsedData(parsed);
+          
+          if (parsed.length > 0) {
+            toast.success(`Parsed ${parsed.length} price records from Excel`);
+          } else {
+            toast.error("No valid data found in Excel file");
+          }
         } else {
-          toast.error("No valid data found in CSV");
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const text = event.target?.result as string;
+            const parsed = parseCSV(text);
+            setParsedData(parsed);
+            
+            if (parsed.length > 0) {
+              toast.success(`Parsed ${parsed.length} rows from CSV`);
+            } else {
+              toast.error("No valid data found in CSV");
+            }
+          };
+          reader.readAsText(selectedFile);
         }
-      };
-      reader.readAsText(selectedFile);
+      } catch (error) {
+        toast.error(`Failed to parse file: ${error instanceof Error ? error.message : "Unknown error"}`);
+      }
     },
-    [parseCSV]
+    [parseCSV, parseExcelPivot]
   );
 
   const handleImport = async () => {
@@ -145,7 +246,7 @@ export default function Admin() {
     setImportProgress(0);
 
     const result: ImportResult = { success: 0, failed: 0, errors: [] };
-    const batchSize = 100;
+    const batchSize = 500; // Increased batch size for efficiency
     const totalBatches = Math.ceil(parsedData.length / batchSize);
 
     for (let i = 0; i < parsedData.length; i += batchSize) {
@@ -224,22 +325,27 @@ export default function Admin() {
       </header>
 
       <main className="mx-auto max-w-4xl p-4 space-y-4">
-        {/* CSV Format Info */}
+        {/* File Format Info */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">CSV Format</CardTitle>
+            <CardTitle className="text-base">Supported Formats</CardTitle>
             <CardDescription>
-              Upload a CSV file with the following columns (column names are case-insensitive):
+              Upload historical price data in one of the following formats:
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="bg-muted/50 rounded-lg p-3 font-mono text-sm overflow-x-auto">
-              <p className="text-muted-foreground">Required:</p>
-              <p>symbol, date, close</p>
-              <p className="text-muted-foreground mt-2">Optional:</p>
-              <p>open, high, low, volume</p>
-              <p className="text-muted-foreground mt-2">Date formats supported:</p>
-              <p>YYYY-MM-DD, DD-MM-YYYY, DD/MM/YYYY, DD-Mon-YYYY</p>
+          <CardContent className="space-y-3">
+            <div className="bg-muted/50 rounded-lg p-3 text-sm">
+              <p className="font-semibold text-primary">Excel Pivot Format (.xlsx)</p>
+              <p className="text-muted-foreground">
+                Date in first column, symbols as column headers, closing prices in cells.
+              </p>
+              <code className="text-xs block mt-1">| Date | NFML | UCB | ABBANK | ...</code>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3 text-sm">
+              <p className="font-semibold text-primary">CSV Format (.csv)</p>
+              <p className="text-muted-foreground">
+                Columns: symbol, date, close (+ optional: open, high, low, volume)
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -249,14 +355,14 @@ export default function Admin() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Upload className="h-4 w-4" />
-              Upload CSV
+              Upload File
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex gap-2">
               <Input
                 type="file"
-                accept=".csv"
+                accept=".csv,.xlsx,.xls"
                 onChange={handleFileChange}
                 className="flex-1"
               />
@@ -283,7 +389,7 @@ export default function Admin() {
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center justify-between">
                 <span>Data Preview</span>
-                <Badge variant="secondary">{parsedData.length} rows</Badge>
+                <Badge variant="secondary">{parsedData.length.toLocaleString()} records</Badge>
               </CardTitle>
               <CardDescription>
                 {uniqueSymbols.length} symbol(s): {uniqueSymbols.slice(0, 10).join(", ")}
@@ -327,7 +433,7 @@ export default function Admin() {
                 </table>
                 {parsedData.length > 20 && (
                   <p className="text-center text-sm text-muted-foreground py-2">
-                    ... and {parsedData.length - 20} more rows
+                    ... and {(parsedData.length - 20).toLocaleString()} more rows
                   </p>
                 )}
               </div>
@@ -347,7 +453,7 @@ export default function Admin() {
                   disabled={isImporting || parsedData.length === 0}
                   className="w-full"
                 >
-                  {isImporting ? "Importing..." : `Import ${parsedData.length} Records`}
+                  {isImporting ? "Importing..." : `Import ${parsedData.length.toLocaleString()} Records`}
                 </Button>
               </div>
             </CardContent>
@@ -370,11 +476,11 @@ export default function Admin() {
             <CardContent>
               <div className="flex gap-4">
                 <div className="flex-1 bg-success/10 rounded-lg p-3 text-center">
-                  <p className="text-2xl font-bold text-success">{importResult.success}</p>
+                  <p className="text-2xl font-bold text-success">{importResult.success.toLocaleString()}</p>
                   <p className="text-xs text-muted-foreground">Successful</p>
                 </div>
                 <div className="flex-1 bg-destructive/10 rounded-lg p-3 text-center">
-                  <p className="text-2xl font-bold text-destructive">{importResult.failed}</p>
+                  <p className="text-2xl font-bold text-destructive">{importResult.failed.toLocaleString()}</p>
                   <p className="text-xs text-muted-foreground">Failed</p>
                 </div>
               </div>
