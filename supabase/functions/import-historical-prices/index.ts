@@ -37,16 +37,19 @@ serve(async (req) => {
       );
     }
 
+    // Round to 1 decimal place
+    const round1 = (n: number): number => Math.round(n * 10) / 10;
+
     // Validate and transform data
     const validRecords = prices
       .filter((p) => p.symbol && p.date && p.close > 0)
       .map((p) => ({
         symbol: p.symbol.toUpperCase().trim(),
         date: p.date,
-        open: Math.max(0, p.open || p.close),
-        high: Math.max(p.high || p.close, p.open || p.close, p.close),
-        low: Math.min(p.low || p.close, p.open || p.close, p.close),
-        close: p.close,
+        open: round1(Math.max(0, p.open || p.close)),
+        high: round1(Math.max(p.high || p.close, p.open || p.close, p.close)),
+        low: round1(Math.min(p.low || p.close, p.open || p.close, p.close)),
+        close: round1(p.close),
         volume: Math.max(0, Math.floor(p.volume || 0)),
       }));
 
