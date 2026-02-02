@@ -18,6 +18,8 @@ const TIMEFRAMES = [
   { value: "3M", label: "3M" },
   { value: "6M", label: "6M" },
   { value: "1Y", label: "1Y" },
+  { value: "10Y", label: "10Y" },
+  { value: "Max", label: "Max" },
 ] as const;
 
 type Timeframe = typeof TIMEFRAMES[number]["value"];
@@ -80,7 +82,7 @@ export default function HistoricalData() {
             />
           </div>
           <Tabs value={timeframe} onValueChange={(v) => setTimeframe(v as Timeframe)}>
-            <TabsList className="grid grid-cols-6">
+            <TabsList className="grid grid-cols-8">
               {TIMEFRAMES.map((tf) => (
                 <TabsTrigger key={tf.value} value={tf.value} className="text-xs">
                   {tf.label}
