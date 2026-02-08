@@ -12,7 +12,7 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
-  public: {
+  dse_market_data: {
     Tables: {
       historical_prices: {
         Row: {
@@ -110,7 +110,7 @@ export type Database = {
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "dse_market_data">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
@@ -226,7 +226,7 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  public: {
+  dse_market_data: {
     Enums: {},
   },
 } as const

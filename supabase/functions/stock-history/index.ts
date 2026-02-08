@@ -76,7 +76,9 @@ async function fetchFromDatabase(
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      db: { schema: 'dse_market_data' },
+    });
 
     const startStr = formatDateYMD(startDate);
     const endStr = formatDateYMD(endDate);
